@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wireguard-agent
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: wireguard-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - list
+      - watch
+      - get
+      - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: wireguard-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: wireguard-agent
+subjects:
+  - kind: ServiceAccount
+    name: wireguard-agent
+    namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: install-wireguard-script
+  namespace: kube-system
+data:
+  install.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ -x "$(command -v wg)" ]]; then
+      echo 'WireGuard is already installed'
+      exit 0
+    fi
+
+    OS=$(lsb_release -d | awk -F"\t" '{print $2}')
+    if [[ ${OS} != *"Ubuntu 18.04"* ]]; then
+      echo "Not Ubuntu 18.04 - Won't install WireGuard"
+      exit 1
+    fi
+
+    if [[ ! -f "wireguard-ubuntu-wireguard-bionic.list" ]]; then
+      add-apt-repository -y ppa:wireguard/wireguard
+    fi
+
+    # In case something got canceled
+    dpkg --configure -a
+
+    apt-get install -y wireguard
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wireguard-agent
+  namespace: kube-system
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: wireguard-agent
+  template:
+    metadata:
+      labels:
+        app: wireguard-agent
+    spec:
+      serviceAccountName: wireguard-agent
+      hostPID: true
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      initContainers:
+        - name: copy-install-script
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.0
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+            limits:
+              cpu: "25m"
+              memory: "32Mi"
+          command:
+            # We have to copy the script to the host to have it accessible when using nsenter
+            - /bin/cp
+          args: [
+            "/install-script/install.sh",
+            "/etc/wireguard/install_wireguard.sh",
+          ]
+          volumeMounts:
+            - name: wireguard
+              mountPath: /etc/wireguard
+            - name: install-script
+              mountPath: /install-script
+        - name: install-wireguard
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.0
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "500Mi"
+            limits:
+              cpu: "500m"
+              memory: "500Mi"
+          securityContext:
+            privileged: true
+          command:
+            - /usr/bin/nsenter
+          args: [
+            "-t", "1",
+            "-m",
+            "-u",
+            "-i",
+            "-n",
+            "-p",
+            "--",
+            "/bin/bash", "/etc/wireguard/install_wireguard.sh",
+          ]
+        - name: install-cni-plugins
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.0
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+            limits:
+              cpu: "25m"
+              memory: "32Mi"
+          command:
+            - /bin/sh
+          args:
+            - "-c"
+            - "cp /cni-bin/* /opt/cni/bin/"
+          volumeMounts:
+            - name: cni-bin
+              mountPath: /opt/cni/bin
+      containers:
+        - name: agent
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.0
+          command:
+            - /wireguard-controller
+          args: [
+            "-node-name", "$(NODE_NAME)",
+            "-pod-cidr", "172.25.0.0/16",
+            "-telemetry-listen-address", "127.0.0.1:8081",
+          ]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "25m"
+              memory: "64Mi"
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          readinessProbe:
+            exec:
+              command:
+                - "/usr/bin/wget"
+                - "-O -"
+                - "http://127.0.0.1:8081/ready"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: wireguard
+              mountPath: /etc/wireguard
+            - name: cni-conf
+              mountPath: /etc/cni/net.d
+      volumes:
+        - name: wireguard
+          hostPath:
+            path: /etc/wireguard
+        - name: cni-conf
+          hostPath:
+            path: /etc/cni/net.d
+        - name: cni-bin
+          hostPath:
+            path: /opt/cni/bin
+        - name: install-script
+          configMap:
+            name: install-wireguard-script
