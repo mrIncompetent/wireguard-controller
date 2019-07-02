@@ -14,13 +14,15 @@ import (
 type tplData struct {
 	PodCIDR     string
 	NodePodCIDR string
+	MTU         int
 }
 
-func (r *Reconciler) writeCNIConfig(parentLog *zap.Logger) error {
+func (r *Reconciler) writeCNIConfig(parentLog *zap.Logger, mtu int) error {
 	log := parentLog.Named("cni_config_writer")
 	data := tplData{
 		PodCIDR:     r.podCidrNet.String(),
 		NodePodCIDR: r.nodePodCidrNet.String(),
+		MTU:         mtu,
 	}
 
 	files, err := ioutil.ReadDir(path.Clean(r.cni.TemplateDir))

@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	link, err := netlink.LinkByName(r.interfaceName)
 	if err != nil {
-		// In case
+		// In case the interface was not created yet we requeue
 		if _, isNotFound := err.(netlink.LinkNotFoundError); isNotFound {
 			log.Debug("Skipping route reconciling since the link is not up yet")
 			return ctrl.Result{}, nil

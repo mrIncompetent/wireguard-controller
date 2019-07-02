@@ -138,6 +138,7 @@ func main() {
 		podCidrNet,
 		cniSourceDir,
 		cniTargetDir,
+		interfaceName,
 	); err != nil {
 		log.Fatal("Unable to add the WireGuard interface controller to the controller manager", zap.Error(err))
 	}

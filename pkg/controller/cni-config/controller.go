@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/kubernetes"
+	"github.com/vishvananda/netlink"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -23,6 +24,7 @@ func Add(
 	nodePodCidrNet, podCidrNet *net.IPNet,
 	cniTemplateDir string,
 	cniConfigPath string,
+	interfaceName string,
 ) error {
 
 	options := controller.Options{
@@ -31,6 +33,7 @@ func Add(
 			log:            log.Named(name),
 			nodePodCidrNet: nodePodCidrNet,
 			podCidrNet:     podCidrNet,
+			interfaceName:  interfaceName,
 			cni: CNIConfig{
 				TargetDir:   cniConfigPath,
 				TemplateDir: cniTemplateDir,
@@ -54,13 +57,24 @@ type Reconciler struct {
 	log                        *zap.Logger
 	nodePodCidrNet, podCidrNet *net.IPNet
 	cni                        CNIConfig
+	interfaceName              string
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.With()
 	log.Debug("Processing")
 
-	if err := r.writeCNIConfig(log); err != nil {
+	link, err := netlink.LinkByName(r.interfaceName)
+	if err != nil {
+		// In case the interface was not created yet we requeue
+		if _, isNotFound := err.(netlink.LinkNotFoundError); isNotFound {
+			log.Debug("Skipping route reconciling since the link is not up yet")
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
+	}
+
+	if err := r.writeCNIConfig(log, link.Attrs().MTU); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to write CNI config")
 	}
 
