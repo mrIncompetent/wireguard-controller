@@ -53,7 +53,7 @@ data:
       exit 1
     fi
 
-    if [[ ! -f "wireguard-ubuntu-wireguard-bionic.list" ]]; then
+    if [[ ! -f "/etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list" ]]; then
       add-apt-repository -y ppa:wireguard/wireguard
     fi
 
