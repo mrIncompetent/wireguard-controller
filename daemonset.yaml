@@ -43,7 +43,7 @@ data:
     set -euo pipefail
 
     if [[ -x "$(command -v wg)" ]]; then
-      echo 'WireGuard is already installed'
+      echo "WireGuard is already installed"
       exit 0
     fi
 
@@ -53,14 +53,16 @@ data:
       exit 1
     fi
 
-    if [[ ! -f "wireguard-ubuntu-wireguard-bionic.list" ]]; then
+    if [[ ! -f "/etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list" ]]; then
       add-apt-repository -y ppa:wireguard/wireguard
     fi
 
     # In case something got canceled
     dpkg --configure -a
 
-    apt-get install -y wireguard
+    # Make sure we have headers for all future and our current kernel
+    apt install -y linux-headers-generic linux-headers-$(uname -r)
+    apt install -y wireguard
 
 ---
 apiVersion: apps/v1
