@@ -111,6 +111,13 @@ spec:
               mountPath: /install-script
         - name: install-wireguard
           image: quay.io/mrincompetent/wireguard-controller:v0.1.1
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "500Mi"
+            limits:
+              cpu: "500m"
+              memory: "500Mi"
           securityContext:
             privileged: true
           command:
