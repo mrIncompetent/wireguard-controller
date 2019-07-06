@@ -43,7 +43,7 @@ data:
     set -euo pipefail
 
     if [[ -x "$(command -v wg)" ]]; then
-      echo 'WireGuard is already installed'
+      echo "WireGuard is already installed"
       exit 0
     fi
 
@@ -60,7 +60,9 @@ data:
     # In case something got canceled
     dpkg --configure -a
 
-    apt-get install -y wireguard
+    # Make sure we have headers for all future and our current kernel
+    apt install -y linux-headers-generic linux-headers-$(uname -r)
+    apt install -y wireguard
 
 ---
 apiVersion: apps/v1
@@ -109,13 +111,6 @@ spec:
               mountPath: /install-script
         - name: install-wireguard
           image: quay.io/mrincompetent/wireguard-controller:v0.1.1
-          resources:
-            requests:
-              cpu: "500m"
-              memory: "500Mi"
-            limits:
-              cpu: "500m"
-              memory: "500Mi"
           securityContext:
             privileged: true
           command:
