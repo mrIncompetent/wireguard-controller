@@ -29,12 +29,6 @@
     },
     {
       "type": "loopback"
-    },
-    {
-      "type": "bandwidth",
-      "capabilities": {
-        "bandwidth": true
-      }
     }
   ]
 }

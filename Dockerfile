@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Build image
 # ------------------------------------------------------------------------------
-FROM golang:1.12.6 as build_img
+FROM golang:1.12.7 as build_img
 
 RUN apt-get update && apt-get install -y jq bash curl git
 
@@ -9,7 +9,7 @@ ADD . $GOPATH/src/github.com/mrincompetent/wireguard-controller/
 
 RUN mkdir -p /cni-bin && \
   cd /cni-bin && \
-  curl -L https://github.com/containernetworking/plugins/releases/download/v0.8.1/cni-plugins-linux-amd64-v0.8.1.tgz | tar -xvz
+  curl -L https://github.com/containernetworking/plugins/releases/download/v0.7.5/cni-plugins-amd64-v0.7.5.tgz | tar -xvz
 
 ENV GO111MODULE=on
 ENV CGO_ENABLED=0

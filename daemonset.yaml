@@ -89,7 +89,7 @@ spec:
           effect: NoSchedule
       initContainers:
         - name: copy-install-script
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.1
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
           resources:
             requests:
               cpu: "25m"
@@ -110,7 +110,7 @@ spec:
             - name: install-script
               mountPath: /install-script
         - name: install-wireguard
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.1
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
           resources:
             requests:
               cpu: "500m"
@@ -133,7 +133,7 @@ spec:
             "/bin/bash", "/etc/wireguard/install_wireguard.sh",
           ]
         - name: install-cni-plugins
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.1
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
           resources:
             requests:
               cpu: "25m"
@@ -151,7 +151,7 @@ spec:
               mountPath: /opt/cni/bin
       containers:
         - name: agent
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.1
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
           command:
             - /wireguard-controller
           args: [
