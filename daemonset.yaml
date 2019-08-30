@@ -53,6 +53,11 @@ data:
       exit 1
     fi
 
+    if ! [[ -x "$(command -v add-apt-repository)" ]]; then
+      apt update
+      apt install -y software-properties-common
+    fi
+
     if [[ ! -f "/etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list" ]]; then
       add-apt-repository -y ppa:wireguard/wireguard
     fi
@@ -63,6 +68,52 @@ data:
     # Make sure we have headers for all future and our current kernel
     apt install -y linux-headers-generic linux-headers-$(uname -r)
     apt install -y wireguard
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cni-tpl
+  namespace: kube-system
+data:
+  10-bridge.conflist: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "wg",
+      "plugins": [
+        {
+          "type": "bridge",
+          "bridge": "cni0",
+          "isGateway": true,
+          "isDefaultGateway": true,
+          "ipMasq": false,
+          "hairpinMode": true,
+          "mtu": {{ .MTU }},
+          "ipam": {
+            "type": "host-local",
+            "ranges": [
+              [
+                {
+                  "subnet": "{{ .NodePodCIDR }}"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "type": "portmap",
+          "capabilities": {
+            "portMappings": true
+          }
+        },
+        {
+          "type": "bandwidth",
+          "capabilities": {
+            "bandwidth": true
+          }
+        }
+      ]
+    }
 
 ---
 apiVersion: apps/v1
@@ -89,7 +140,7 @@ spec:
           effect: NoSchedule
       initContainers:
         - name: copy-install-script
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2-dev2
           resources:
             requests:
               cpu: "25m"
@@ -110,7 +161,7 @@ spec:
             - name: install-script
               mountPath: /install-script
         - name: install-wireguard
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2-dev2
           resources:
             requests:
               cpu: "500m"
@@ -133,7 +184,7 @@ spec:
             "/bin/bash", "/etc/wireguard/install_wireguard.sh",
           ]
         - name: install-cni-plugins
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2-dev2
           resources:
             requests:
               cpu: "25m"
@@ -151,13 +202,14 @@ spec:
               mountPath: /opt/cni/bin
       containers:
         - name: agent
-          image: quay.io/mrincompetent/wireguard-controller:v0.1.2
+          image: quay.io/mrincompetent/wireguard-controller:v0.1.2-dev2
           command:
             - /wireguard-controller
           args: [
             "-node-name", "$(NODE_NAME)",
             "-pod-cidr", "172.25.0.0/16",
             "-telemetry-listen-address", "127.0.0.1:8081",
+            "-cni-tpl-path", "/cni-tpl/",
           ]
           env:
             - name: NODE_NAME
@@ -187,6 +239,8 @@ spec:
               mountPath: /etc/wireguard
             - name: cni-conf
               mountPath: /etc/cni/net.d
+            - name: cni-tpl
+              mountPath: /cni-tpl
       volumes:
         - name: wireguard
           hostPath:
@@ -200,3 +254,6 @@ spec:
         - name: install-script
           configMap:
             name: install-wireguard-script
+        - name: cni-tpl
+          configMap:
+            name: cni-tpl

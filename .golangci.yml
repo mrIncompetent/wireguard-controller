@@ -1,0 +1,39 @@
+run:
+  tests: false
+service:
+  golangci-lint-version: 1.17.1
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - prealloc
+    - gochecknoglobals
+    - gochecknoinits
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude: errcheck-excludes.txt
+  golint:
+    min-confidence: 0
+  gocyclo:
+    min-complexity: 20
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  misspell:
+    locale: US
+  lll:
+    line-length: 160
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+      - dupImport # https://github.com/go-critic/go-critic/issues/845

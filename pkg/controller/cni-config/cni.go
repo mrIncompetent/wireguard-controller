@@ -1,14 +1,16 @@
-package cni_config
+package cniconfig
 
 import (
 	"bytes"
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"text/template"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type tplData struct {
@@ -17,11 +19,15 @@ type tplData struct {
 	MTU         int
 }
 
-func (r *Reconciler) writeCNIConfig(parentLog *zap.Logger, mtu int) error {
-	log := parentLog.Named("cni_config_writer")
+func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int) error {
+	_, nodePodCidr, err := net.ParseCIDR(node.Spec.PodCIDR)
+	if err != nil {
+		return errors.Wrap(err, "unable to parse node pod cidr")
+	}
+
 	data := tplData{
-		PodCIDR:     r.podCidrNet.String(),
-		NodePodCIDR: r.nodePodCidrNet.String(),
+		PodCIDR:     r.podNet.String(),
+		NodePodCIDR: nodePodCidr.String(),
 		MTU:         mtu,
 	}
 
@@ -31,11 +37,17 @@ func (r *Reconciler) writeCNIConfig(parentLog *zap.Logger, mtu int) error {
 	}
 
 	for _, file := range files {
-		if file.IsDir() {
+		sourceFilename := path.Join(r.cni.TemplateDir, file.Name())
+		// ioutil.ReadDir uses LState which does not follow symlinks - So symlinked directories will return false on IsDir
+		fileInfo, err := os.Stat(sourceFilename)
+		if err != nil {
+			return errors.Wrapf(err, "unable to check file '%s'", sourceFilename)
+		}
+		if fileInfo.IsDir() {
 			continue
 		}
-		sourceFilename := path.Join(r.cni.TemplateDir, file.Name())
-		targetFilename := path.Join(r.cni.TargetDir, file.Name())
+
+		targetFilename := path.Join(r.cni.TargetDir, fileInfo.Name())
 		if err := templateFile(log, sourceFilename, targetFilename, data); err != nil {
 			return errors.Wrapf(err, "unable to template file '%s'", sourceFilename)
 		}
@@ -72,7 +84,7 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 		return err
 	}
 
-	if bytes.Compare(currentContent, output.Bytes()) == 0 {
+	if bytes.Equal(currentContent, output.Bytes()) {
 		log.Debug("Not writing CNI config as its already up to date")
 		return nil
 	}

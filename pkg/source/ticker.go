@@ -1,4 +1,4 @@
-package kubernetes
+package source
 
 import (
 	"time"
@@ -16,7 +16,7 @@ type IntervalSource struct {
 
 var (
 	staticRequest = reconcile.Request{NamespacedName: types.NamespacedName{
-		Name:      "statuc",
+		Name:      "static",
 		Namespace: "default",
 	}}
 )
@@ -27,7 +27,7 @@ func NewTickerSource(interval time.Duration) *IntervalSource {
 	}
 }
 
-func (i *IntervalSource) Start(handler handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
 	ticker := time.NewTicker(i.interval)
 	// Ensure we always add an initial event
 	queue.Add(staticRequest)

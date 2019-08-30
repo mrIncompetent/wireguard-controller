@@ -1,4 +1,4 @@
-package wireguard_interface
+package wireguardinterface
 
 import (
 	"github.com/prometheus/client_golang/prometheus"

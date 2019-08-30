@@ -1,18 +1,20 @@
-package wireguard_interface
+package wireguardinterface
 
 import (
 	"context"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/kubernetes"
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
+	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
+	"golang.zx2c4.com/wireguard/wgctrl"
 
 	"github.com/pkg/errors"
-	"github.com/vishvananda/netlink"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -23,150 +25,160 @@ const (
 	name = "wireguard_interface_controller"
 )
 
+type keyLoader func() (key *wgtypes.Key, exists bool, err error)
+
 func Add(
 	mgr ctrl.Manager,
 	log *zap.Logger,
 	interfaceName string,
-	wg wgClient,
-	key wgtypes.Key,
 	listeningPort int,
-	ownNodeName string,
-	wgAddr *netlink.Addr,
+	nodeName string,
+	keyLoader keyLoader,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &Reconciler{
 			Client:        mgr.GetClient(),
 			log:           log.Named(name),
-			wg:            wg,
-			key:           key,
 			listeningPort: listeningPort,
 			interfaceName: interfaceName,
-			ownNodeName:   ownNodeName,
-			wgAddr:        wgAddr,
+			nodeName:      nodeName,
+			loadKey:       keyLoader,
 		},
 	}
+
+	if err := kubernetes.RegisterPublicKeyIndexer(mgr.GetFieldIndexer()); err != nil {
+		return errors.Wrap(err, "unable to register the public key indexer")
+	}
+
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
 		return err
 	}
 
-	return c.Watch(kubernetes.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
-}
-
-type wgClient interface {
-	ConfigureDevice(name string, cfg wgtypes.Config) error
-	Device(name string) (*wgtypes.Device, error)
+	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
 }
 
 type Reconciler struct {
 	client.Client
 	log           *zap.Logger
-	wg            wgClient
-	key           wgtypes.Key
 	listeningPort int
-	ownNodeName   string
+	nodeName      string
 	interfaceName string
-	wgAddr        *netlink.Addr
+	loadKey       keyLoader
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.With()
+	ctx := context.Background()
+	log := r.log.With(zap.String("sync_id", rand.String(12)))
 	log.Debug("Processing")
 
-	nodeList := &corev1.NodeList{}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := r.Client.List(ctx, nodeList); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to list nodes")
+	var err error
+	key, exists, err := r.loadKey()
+	if err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "unable to load private key")
+	}
+	if !exists {
+		log.Debug("Skipping sync as the private key does not exist yet")
+		return ctrl.Result{}, nil
 	}
 
-	if err := r.configureInterface(log); err != nil {
+	ownNode := &corev1.Node{}
+	if err = r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, ownNode); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
+	}
+
+	if err = r.configureInterface(log, ownNode); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to configure WireGuard interface")
 	}
 
-	device, err := r.wg.Device(r.interfaceName)
+	wgClient, err := wgctrl.New()
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to create a new WireGuard client")
+	}
+	defer func() {
+		if closeErr := wgClient.Close(); closeErr != nil {
+			log.Error("unable to close the WireGuard client", zap.Error(closeErr))
+		}
+	}()
+
+	device, err := wgClient.Device(r.interfaceName)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
 	}
 	peerCount.Set(float64(len(device.Peers)))
 
-	// Build up peer info by ip for faster lookups below
-	peers := map[string]*wgtypes.Peer{}
-	peerSet := sets.NewString()
-	for i, peer := range device.Peers {
-		pubKey := peer.PublicKey.String()
-		peerSet.Insert(pubKey)
-		peers[pubKey] = &device.Peers[i]
-	}
-
-	nodes := map[string]*corev1.Node{}
-	nodeSet := sets.NewString()
-	for i, node := range nodeList.Items {
-		pubKey := node.Annotations[kubernetes.AnnotationKeyPublicKey]
-		if pubKey == "" {
-			log.Debug("Skipping node as it has no public key set", zap.String("node", node.Name))
-			continue
-		}
-		if node.Name == r.ownNodeName {
-			continue
-		}
-		nodeSet.Insert(pubKey)
-		nodes[pubKey] = &nodeList.Items[i]
-	}
-
 	interfaceConfig := wgtypes.Config{
-		PrivateKey: &r.key,
+		PrivateKey: key,
 		ListenPort: &r.listeningPort,
 	}
 
-	// Check if we have any peers which have no matching node object
-	if diff := peerSet.Difference(nodeSet); diff.Len() > 0 {
-		// Delete configured WireGuard peers
-		for _, pubKey := range diff.List() {
-			peer := peers[pubKey]
-			log.Info("Removing peer as it has no associated node", zap.String("peer", pubKey))
+	var reconfigureErrors error
 
-			peerCfg := wgtypes.PeerConfig{
-				PublicKey: peer.PublicKey,
-				Remove:    true,
-			}
-			interfaceConfig.Peers = append(interfaceConfig.Peers, peerCfg)
-		}
-	}
+	// Keep the configs indexed by public key
+	// That way we know if we already have a peerConfig or need to add a new one
+	peerConfigs := map[string]*wgtypes.PeerConfig{}
 
-	// We collect all errors in a slice to return them later.
-	// We want to process as much as possible. Returning early with an error can break the cluster network
-	var combinedErr error
-
-	// Check if we have any nodes which have no configured WireGuard peer
-	if diff := nodeSet.Difference(peerSet); diff.Len() > 0 {
-		// Add the WireGuard peer
-		for _, pubKey := range diff.List() {
-			node := nodes[pubKey]
-			nodeLog := log.With(
-				zap.String("node", node.Name),
-				zap.String("public_key", pubKey),
+	// Update & Remove existing peers
+	for i := range device.Peers {
+		peerLog := log.With(zap.String("peer", device.Peers[i].PublicKey.String()))
+		peerConfig, err := kubernetes.PeerConfigForExistingPeer(ctx, peerLog, r.Client, &device.Peers[i])
+		if err != nil {
+			reconfigureErrors = multierr.Append(
+				reconfigureErrors,
+				errors.Wrapf(err, "unable to get an updated peer config for peer '%s'", device.Peers[i].PublicKey.String()),
 			)
-
-			peerCfg, err := GetPeerConfigForNode(nodeLog, node)
-			if err != nil {
-				combinedErr = multierr.Append(combinedErr, errors.WithMessagef(err, "unable to create the peer config for node '%s'", node.Name))
-				continue
-			}
-
-			nodeLog.Info("Successfully added node to config")
-			interfaceConfig.Peers = append(interfaceConfig.Peers, *peerCfg)
+			continue
 		}
+
+		peerConfigs[peerConfig.PublicKey.String()] = peerConfig
 	}
 
-	if err := r.wg.ConfigureDevice(r.interfaceName, interfaceConfig); err != nil {
-		combinedErr = multierr.Append(combinedErr, errors.Wrap(err, "unable to reconfigure interface"))
+	nodeList := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodeList); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
 	}
 
-	if combinedErr != nil {
-		return ctrl.Result{}, combinedErr
+	for i := range nodeList.Items {
+		nodeLog := log.With(zap.String("node", nodeList.Items[i].Name))
+		if nodeList.Items[i].Name == r.nodeName {
+			nodeLog.Debug("Skipping node as its the node we're running on")
+			continue
+		}
+
+		pubKey, err := kubernetes.PublicKey(&nodeList.Items[i])
+		if err != nil {
+			if kubernetes.IsPublicKeyNotFound(err) || kubernetes.IsEndpointNotFound(err) {
+				nodeLog.Info("Skipping node as its missing infos: " + err.Error())
+			} else {
+				reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to get the public key from node %s", nodeList.Items[i].Name))
+			}
+			continue
+		}
+		nodeLog = nodeLog.With(zap.String("public_key", pubKey.String()))
+
+		// If we already have a config for that node, we can skip here
+		if _, exists := peerConfigs[pubKey.String()]; exists {
+			continue
+		}
+
+		peerConfig, err := kubernetes.PeerConfigForNode(log, &nodeList.Items[i])
+		if err != nil {
+			reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to build the peer config for node %s", nodeList.Items[i].Name))
+			continue
+		}
+
+		peerConfigs[peerConfig.PublicKey.String()] = peerConfig
+		nodeLog.Info("Added a new peer config")
 	}
 
-	return ctrl.Result{}, nil
+	for _, peerCfg := range peerConfigs {
+		interfaceConfig.Peers = append(interfaceConfig.Peers, *peerCfg)
+	}
+
+	if err := wgClient.ConfigureDevice(r.interfaceName, interfaceConfig); err != nil {
+		reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrap(err, "unable to reconfigure interface"))
+	}
+
+	return ctrl.Result{}, reconfigureErrors
 }

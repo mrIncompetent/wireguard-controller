@@ -5,13 +5,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/kubernetes"
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
 
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -32,7 +33,7 @@ type Reconciler struct {
 func Add(
 	mgr ctrl.Manager,
 	log *zap.Logger,
-	interfaceName string,
+	interfaceName,
 	nodeName string,
 ) error {
 	options := controller.Options{
@@ -49,11 +50,12 @@ func Add(
 		return err
 	}
 
-	return c.Watch(kubernetes.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
+	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.With()
+	ctx := context.Background()
+	log := r.log.With(zap.String("sync_id", rand.String(12)))
 	log.Debug("Processing")
 
 	link, err := netlink.LinkByName(r.interfaceName)
@@ -67,20 +69,20 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	nodeList := &corev1.NodeList{}
-	if err := r.List(context.Background(), nodeList); err != nil {
+	if err := r.List(ctx, nodeList); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to list nodes")
 	}
 
 	var combinedErr error
-	for _, node := range nodeList.Items {
-		if node.Name == r.nodeName {
+	for i := range nodeList.Items {
+		if nodeList.Items[i].Name == r.nodeName {
 			// Do not setup routes for the local node.
 			continue
 		}
 
-		nodeLog := log.With(zap.String("node", node.Name))
-		if err := r.setupRoute(nodeLog, link, node); err != nil {
-			combinedErr = multierr.Append(combinedErr, errors.WithMessagef(err, "unable to setup route for node '%s'", node.Name))
+		nodeLog := log.With(zap.String("node", nodeList.Items[i].Name))
+		if err := r.setupRoute(nodeLog, link, &nodeList.Items[i]); err != nil {
+			combinedErr = multierr.Append(combinedErr, errors.WithMessagef(err, "unable to setup route for node '%s'", nodeList.Items[i].Name))
 			continue
 		}
 	}
@@ -92,7 +94,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node corev1.Node) error {
+func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node *corev1.Node) error {
 	_, podCIDRNet, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
 		return errors.Wrap(err, "unable to parse pod CIDR")

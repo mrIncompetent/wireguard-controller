@@ -1,4 +1,4 @@
-package cni_config
+package cniconfig
 
 import (
 	"bytes"

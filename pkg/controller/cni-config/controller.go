@@ -1,14 +1,19 @@
-package cni_config
+package cniconfig
 
 import (
+	"context"
 	"net"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/kubernetes"
-	"github.com/vishvananda/netlink"
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -21,19 +26,20 @@ const (
 func Add(
 	mgr ctrl.Manager,
 	log *zap.Logger,
-	nodePodCidrNet, podCidrNet *net.IPNet,
-	cniTemplateDir string,
-	cniConfigPath string,
+	cniTemplateDir,
+	cniConfigPath,
 	interfaceName string,
+	podNet *net.IPNet,
+	nodeName string,
 ) error {
-
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &Reconciler{
-			log:            log.Named(name),
-			nodePodCidrNet: nodePodCidrNet,
-			podCidrNet:     podCidrNet,
-			interfaceName:  interfaceName,
+			Client:        mgr.GetClient(),
+			log:           log.Named(name),
+			interfaceName: interfaceName,
+			nodeName:      nodeName,
+			podNet:        podNet,
 			cni: CNIConfig{
 				TargetDir:   cniConfigPath,
 				TemplateDir: cniTemplateDir,
@@ -45,7 +51,7 @@ func Add(
 		return err
 	}
 
-	return c.Watch(kubernetes.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
+	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
 }
 
 type CNIConfig struct {
@@ -54,14 +60,17 @@ type CNIConfig struct {
 }
 
 type Reconciler struct {
-	log                        *zap.Logger
-	nodePodCidrNet, podCidrNet *net.IPNet
-	cni                        CNIConfig
-	interfaceName              string
+	client.Client
+	log           *zap.Logger
+	cni           CNIConfig
+	interfaceName string
+	podNet        *net.IPNet
+	nodeName      string
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.With()
+	ctx := context.Background()
+	log := r.log.With(zap.String("sync_id", rand.String(12)))
 	log.Debug("Processing")
 
 	link, err := netlink.LinkByName(r.interfaceName)
@@ -74,7 +83,12 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
 	}
 
-	if err := r.writeCNIConfig(log, link.Attrs().MTU); err != nil {
+	node := &corev1.Node{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
+	}
+
+	if err := r.writeCNIConfig(log, node, link.Attrs().MTU); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to write CNI config")
 	}
 

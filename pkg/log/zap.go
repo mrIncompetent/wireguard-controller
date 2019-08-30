@@ -1,20 +1,13 @@
 package log
 
 import (
-	"errors"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	FormatJSON    = "json"
-	FormatConsole = "console"
-)
-
-func New(level *zapcore.Level, format string) (*zap.Logger, error) {
-	if format != FormatJSON && format != FormatConsole {
-		return nil, errors.New("invalid format specified")
+func New(level zapcore.Level, encoding Encoding) (*zap.Logger, error) {
+	if !SupportedEncodings.Contains(encoding) {
+		return nil, InvalidEncodingError{encoding: encoding}
 	}
 
 	encCfg := zap.NewProductionEncoderConfig()
@@ -23,16 +16,16 @@ func New(level *zapcore.Level, format string) (*zap.Logger, error) {
 	encCfg.EncodeTime = zapcore.EpochNanosTimeEncoder
 
 	loggerCfg := zap.NewProductionConfig()
-	loggerCfg.Level = zap.NewAtomicLevelAt(*level)
+	loggerCfg.Level = zap.NewAtomicLevelAt(level)
 	loggerCfg.EncoderConfig = encCfg
-	loggerCfg.Encoding = format
+	loggerCfg.Encoding = encoding.String()
 
-	coreLogger, err := loggerCfg.Build(zap.AddCaller())
+	log, err := loggerCfg.Build(zap.AddCaller())
 	if err != nil {
 		return nil, err
 	}
 
-	return coreLogger, nil
+	return log, nil
 }
 
 func NewTestLog(ws zapcore.WriteSyncer) *zap.Logger {

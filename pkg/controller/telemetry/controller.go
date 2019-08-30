@@ -22,7 +22,7 @@ type healthHandler struct {
 	log    *zap.Logger
 }
 
-func Add(mgr ctrl.Manager, listenAddress string, log *zap.Logger) error {
+func Add(mgr ctrl.Manager, log *zap.Logger, listenAddress string) error {
 	health := healthcheck.NewMetricsHandler(metrics.Registry, "wireguard_controller")
 	router := http.NewServeMux()
 

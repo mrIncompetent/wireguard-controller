@@ -1,4 +1,4 @@
-package wireguard
+package netlink
 
 import (
 	"github.com/vishvananda/netlink"
