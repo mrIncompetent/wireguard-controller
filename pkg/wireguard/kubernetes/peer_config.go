@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/go-test/deep"
@@ -13,6 +14,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type NodeNotInitializedError struct {
+	err error
+}
+
+func (e NodeNotInitializedError) Error() string {
+	return fmt.Sprintf("The node is not fully initialized yet: %v", e.err)
+}
+
+func IsNodeNotInitializedError(err error) bool {
+	_, isNotInitialized := err.(NodeNotInitializedError)
+	return isNotInitialized
+}
+
 func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig, error) {
 	log = log.Named("peer_config").With(
 		zap.String("pod_cidr", node.Spec.PodCIDR),
@@ -20,6 +34,9 @@ func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig,
 
 	key, err := PublicKey(node)
 	if err != nil {
+		if IsPublicKeyNotFound(err) {
+			return nil, NodeNotInitializedError{err: err}
+		}
 		return nil, err
 	}
 	log = log.With(zap.String("node_public_key", key.String()))
@@ -27,6 +44,9 @@ func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig,
 
 	endpoint, err := EndpointAddress(node)
 	if err != nil {
+		if IsEndpointNotFound(err) {
+			return nil, NodeNotInitializedError{err: err}
+		}
 		return nil, err
 	}
 	log = log.With(zap.String("endpoint", endpoint.String()))

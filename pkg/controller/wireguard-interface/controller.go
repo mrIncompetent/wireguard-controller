@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
+	"golang.zx2c4.com/wireguard/wgctrl"
+
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
-	"golang.zx2c4.com/wireguard/wgctrl"
 
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -148,8 +149,8 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		pubKey, err := kubernetes.PublicKey(&nodeList.Items[i])
 		if err != nil {
-			if kubernetes.IsPublicKeyNotFound(err) || kubernetes.IsEndpointNotFound(err) {
-				nodeLog.Info("Skipping node as its missing infos: " + err.Error())
+			if kubernetes.IsPublicKeyNotFound(err) {
+				nodeLog.Debug("Skipping node as its missing infos: " + err.Error())
 			} else {
 				reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to get the public key from node %s", nodeList.Items[i].Name))
 			}
@@ -164,6 +165,10 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		peerConfig, err := kubernetes.PeerConfigForNode(log, &nodeList.Items[i])
 		if err != nil {
+			if kubernetes.IsNodeNotInitializedError(err) {
+				nodeLog.Debug("Skipping node: " + err.Error())
+				continue
+			}
 			reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to build the peer config for node %s", nodeList.Items[i].Name))
 			continue
 		}

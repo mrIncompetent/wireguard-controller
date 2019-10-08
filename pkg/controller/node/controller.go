@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/client-go/util/retry"
+
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
@@ -82,10 +84,21 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
 	}
 
-	if kubernetes.SetPublicKey(node, key.PublicKey()) {
-		if err := r.Client.Update(ctx, node); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "unable to store the public key on the node object")
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
+			return errors.Wrap(err, "unable to load own node")
 		}
+
+		if kubernetes.SetPublicKey(node, key.PublicKey()) {
+			if err := r.Client.Update(ctx, node); err != nil {
+				return err
+			}
+			log.Info("Updated the node's public key")
+		}
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to store the public key on the node object")
 	}
 
 	nodeAddress := kubernetes.GetPreferredAddress(node, []corev1.NodeAddressType{corev1.NodeInternalIP, corev1.NodeExternalIP})
@@ -95,12 +108,23 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				"Only the following address types can be used: InternalIP, ExternalIP",
 		)
 	}
-	wireGuardEndpoint := fmt.Sprintf("%s:%d", nodeAddress.Address, r.wireguardPort)
 
-	if kubernetes.SetEndpointAddress(node, wireGuardEndpoint) {
-		if err := r.Client.Update(ctx, node); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "unable to store the WireGuard endpoint address on the node object")
+	wireGuardEndpoint := fmt.Sprintf("%s:%d", nodeAddress.Address, r.wireguardPort)
+	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
+			return errors.Wrap(err, "unable to load own node")
 		}
+
+		if kubernetes.SetEndpointAddress(node, wireGuardEndpoint) {
+			if err := r.Client.Update(ctx, node); err != nil {
+				return err
+			}
+			log.Info("Updated the node's WireGuard endpoint")
+		}
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to store the WireGuard endpoint on the node object")
 	}
 
 	return ctrl.Result{}, nil

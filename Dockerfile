@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Build image
 # ------------------------------------------------------------------------------
-FROM golang:1.12.9 as build_img
+FROM golang:1.13.1 as build_img
 
 RUN apt-get update && apt-get install -y jq bash curl git
 
@@ -14,7 +14,6 @@ RUN mkdir -p /cni-bin && \
 ENV GO111MODULE=on
 ENV CGO_ENABLED=0
 RUN cd $GOPATH/src/github.com/mrincompetent/wireguard-controller/ && \
-  go mod tidy && \
   go build -o /wireguard-controller -ldflags "-s" -a -installsuffix cgo github.com/mrincompetent/wireguard-controller/cmd/controller
 
 # ------------------------------------------------------------------------------

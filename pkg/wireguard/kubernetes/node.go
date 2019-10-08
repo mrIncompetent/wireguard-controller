@@ -45,9 +45,9 @@ func SetPublicKey(node *corev1.Node, publicKey wgtypes.Key) bool {
 		node.Annotations = map[string]string{}
 	}
 
-	s := publicKey.String()
-	if node.Annotations[AnnotationKeyPublicKey] != s {
-		node.Annotations[AnnotationKeyPublicKey] = s
+	// We cannot validate public keys :/
+	if node.Annotations[AnnotationKeyPublicKey] == "" {
+		node.Annotations[AnnotationKeyPublicKey] = publicKey.String()
 		return true
 	}
 	return false
@@ -82,8 +82,8 @@ func SetEndpointAddress(node *corev1.Node, address string) bool {
 		node.Annotations = map[string]string{}
 	}
 
-	if node.Annotations[AnnotationKeyPublicKey] != address {
-		node.Annotations[AnnotationKeyPublicKey] = address
+	if node.Annotations[AnnotationKeyEndpoint] != address {
+		node.Annotations[AnnotationKeyEndpoint] = address
 		return true
 	}
 	return false
