@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Build image
 # ------------------------------------------------------------------------------
-FROM golang:1.13.1 as build_img
+FROM golang:1.13.3 as build_img
 
 RUN apt-get update && apt-get install -y jq bash curl git
 
@@ -19,6 +19,6 @@ RUN cd $GOPATH/src/github.com/mrincompetent/wireguard-controller/ && \
 # ------------------------------------------------------------------------------
 # App image
 # ------------------------------------------------------------------------------
-FROM alpine:3.10.2 as prod_img
+FROM alpine:3.10.3 as prod_img
 COPY --from=build_img /wireguard-controller /wireguard-controller
 COPY --from=build_img /cni-bin /cni-bin
