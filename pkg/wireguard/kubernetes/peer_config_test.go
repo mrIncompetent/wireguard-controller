@@ -7,11 +7,9 @@ import (
 	"net"
 	"testing"
 
-	customlog "github.com/mrincompetent/wireguard-controller/pkg/log"
 	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
 
 	"github.com/go-test/deep"
-	"go.uber.org/zap/zapcore"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -161,7 +159,7 @@ debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.1.0/24",
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			logOutput := &bytes.Buffer{}
-			log := customlog.NewTestLog(zapcore.AddSync(logOutput))
+			log := testhelper.Logger(logOutput)
 			defer t.Log(logOutput.String())
 			defer log.Sync()
 

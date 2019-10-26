@@ -2,23 +2,20 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net"
-	"os"
 
 	cniconfig "github.com/mrincompetent/wireguard-controller/pkg/controller/cni-config"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/node"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/route"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/telemetry"
 	wireguard_interface "github.com/mrincompetent/wireguard-controller/pkg/controller/wireguard-interface"
-	customlog "github.com/mrincompetent/wireguard-controller/pkg/log"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
@@ -30,21 +27,15 @@ var (
 	podCIDR                = flag.String("pod-cidr", "", "Pod CIDR")
 	wireGuardPort          = flag.Int("wireguard-port", 51820, "WireGuard listening port")
 	telemetryListenAddress = flag.String("telemetry-listen-address", "127.0.0.1:8080", "Listen address for the telemetry http server")
-
-	logLevel    = zap.LevelFlag("log-level", zapcore.InfoLevel, "Log level")
-	logEncoding = customlog.EncodingFlag("log-encoding", customlog.EncodingJSON, "Log encoding. Supported encodings: "+customlog.SupportedEncodings.String())
+	development            = flag.Bool("development", false, "enable development logging")
 )
 
 func main() {
 	flag.Parse()
 
-	log, err := customlog.New(*logLevel, *logEncoding)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	// We need to skip 1 caller level when using zapr
-	ctrl.SetLogger(zapr.NewLogger(log.WithOptions(zap.AddCallerSkip(1))))
+	log := ctrlzap.NewRaw(enableDevelopment(*development))
+	defer log.Sync()
+	ctrl.SetLogger(zapr.NewLogger(log))
 
 	if *podCIDR == "" {
 		log.Fatal("pod-cidr must be set")
@@ -125,5 +116,11 @@ func main() {
 	log.Info("Starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		log.Fatal("problem running manager", zap.Error(err))
+	}
+}
+
+func enableDevelopment(b bool) func(o *ctrlzap.Options) {
+	return func(o *ctrlzap.Options) {
+		o.Development = b
 	}
 }

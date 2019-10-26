@@ -8,10 +8,7 @@ import (
 	"os"
 	"testing"
 
-	customlog "github.com/mrincompetent/wireguard-controller/pkg/log"
 	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
-
-	"go.uber.org/zap/zapcore"
 )
 
 func TestTemplateFile(t *testing.T) {
@@ -69,7 +66,7 @@ info	Successfully wrote CNI config	{"template_source": "/tmp/wireguard-controlle
 			defer os.Remove(targetFile.Name())
 
 			logOutput := &bytes.Buffer{}
-			log := customlog.NewTestLog(zapcore.AddSync(logOutput))
+			log := testhelper.Logger(logOutput)
 			defer log.Sync()
 
 			err = templateFile(log, srcFile.Name(), targetFile.Name(), test.data)
