@@ -260,8 +260,8 @@ spec:
           image: quay.io/coreos/kube-rbac-proxy:v0.4.1
           name: kube-rbac-proxy
           ports:
-            - containerPort: 9100
-              hostPort: 9100
+            - containerPort: 8081
+              hostPort: 8081
               name: https
       volumes:
         - name: wireguard
