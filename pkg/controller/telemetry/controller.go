@@ -23,13 +23,13 @@ type healthHandler struct {
 	log    *zap.Logger
 }
 
-func Add(mgr ctrl.Manager, log *zap.Logger, listenAddress string) error {
+func Add(mgr ctrl.Manager, log *zap.Logger, promRegistry prometheus.Gatherer, listenAddress string) error {
 	health := healthcheck.NewMetricsHandler(metrics.Registry, "wireguard_controller")
 	router := http.NewServeMux()
 
 	registries := prometheus.Gatherers{
+		promRegistry,
 		metrics.Registry,
-		prometheus.DefaultGatherer,
 	}
 
 	// Metrics

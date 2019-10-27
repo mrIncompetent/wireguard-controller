@@ -4,15 +4,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	peerCount = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "wireguard_peer_count",
-			Help: "Number of configured WireGuard peers.",
-		},
-	)
-)
+type metrics struct {
+	peerCount prometheus.Gauge
+}
 
-func init() {
-	prometheus.DefaultRegisterer.MustRegister(peerCount)
+func (m *metrics) Register(reg prometheus.Registerer) error {
+	return reg.Register(m.peerCount)
 }

@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
@@ -31,6 +32,7 @@ func Add(
 	interfaceName string,
 	podNet *net.IPNet,
 	nodeName string,
+	promRegistry prometheus.Registerer,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,

@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"golang.zx2c4.com/wireguard/wgctrl"
-
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,7 +35,21 @@ func Add(
 	listeningPort int,
 	nodeName string,
 	keyLoader keyLoader,
+	promRegistry prometheus.Registerer,
 ) error {
+	m := &metrics{
+		peerCount: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "wireguard_peer_count",
+				Help: "Number of configured WireGuard peers.",
+			},
+		),
+	}
+
+	if err := m.Register(promRegistry); err != nil {
+		return errors.Wrap(err, "unable to register metrics")
+	}
+
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &Reconciler{
@@ -45,6 +59,7 @@ func Add(
 			interfaceName: interfaceName,
 			nodeName:      nodeName,
 			loadKey:       keyLoader,
+			metrics:       m,
 		},
 	}
 
@@ -67,6 +82,7 @@ type Reconciler struct {
 	nodeName      string
 	interfaceName string
 	loadKey       keyLoader
+	metrics       *metrics
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -111,7 +127,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
 	}
 
-	peerCount.Set(float64(len(device.Peers)))
+	r.metrics.peerCount.Set(float64(len(device.Peers)))
 
 	interfaceConfig := wgtypes.Config{
 		PrivateKey: key,

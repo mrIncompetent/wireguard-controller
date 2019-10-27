@@ -12,6 +12,7 @@ import (
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 
 	"github.com/go-logr/zapr"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,6 +37,8 @@ func main() {
 	log := ctrlzap.NewRaw(enableDevelopment(*development))
 	defer log.Sync()
 	ctrl.SetLogger(zapr.NewLogger(log))
+
+	promRegistry := prometheus.NewRegistry()
 
 	if *podCIDR == "" {
 		log.Panic("pod-cidr must be set")
@@ -77,6 +80,7 @@ func main() {
 		*wireGuardPort,
 		*nodeName,
 		loadKey,
+		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the WireGuard interface controller to the controller manager", zap.Error(err))
 	}
@@ -89,6 +93,7 @@ func main() {
 		*interfaceName,
 		podCidrNet,
 		*nodeName,
+		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the cni config controller to the controller manager", zap.Error(err))
 	}
@@ -98,6 +103,7 @@ func main() {
 		log,
 		*interfaceName,
 		*nodeName,
+		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the route controller to the controller manager", zap.Error(err))
 	}
@@ -108,6 +114,7 @@ func main() {
 		*nodeName,
 		*privateKeyPath,
 		*wireGuardPort,
+		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the node controller to the controller manager", zap.Error(err))
 	}
@@ -115,6 +122,7 @@ func main() {
 	if err := telemetry.Add(
 		mgr,
 		log,
+		promRegistry,
 		*telemetryListenAddress,
 	); err != nil {
 		log.Panic("Unable to add the telemetry server to the controller manager", zap.Error(err))

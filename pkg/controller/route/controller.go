@@ -8,6 +8,7 @@ import (
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -28,6 +29,7 @@ type Reconciler struct {
 	log           *zap.Logger
 	interfaceName string
 	nodeName      string
+	metrics       *metrics
 }
 
 func Add(
@@ -35,7 +37,22 @@ func Add(
 	log *zap.Logger,
 	interfaceName,
 	nodeName string,
+	promRegistry prometheus.Registerer,
 ) error {
+	m := &metrics{
+		routeReplaceLatency: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "netlink_route_replace_latency_seconds",
+				Help:    "Replace latency in seconds.",
+				Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
+			},
+		),
+	}
+
+	if err := m.Register(promRegistry); err != nil {
+		return errors.Wrap(err, "unable to register metrics")
+	}
+
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &Reconciler{
@@ -43,6 +60,7 @@ func Add(
 			log:           log.Named(name),
 			interfaceName: interfaceName,
 			nodeName:      nodeName,
+			metrics:       m,
 		},
 	}
 
@@ -115,7 +133,7 @@ func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node *corev1
 		return errors.Wrap(err, "unable to replace route")
 	}
 
-	routeReplaceLatency.Observe(time.Since(start).Seconds())
+	r.metrics.routeReplaceLatency.Observe(time.Since(start).Seconds())
 
 	log.Debug("Replaced route", zap.String("route", route.String()))
 

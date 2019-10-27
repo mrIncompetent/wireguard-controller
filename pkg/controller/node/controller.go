@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/util/retry"
-
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,6 +40,7 @@ func Add(
 	nodeName,
 	privateKeyFilePath string,
 	wireGuardPort int,
+	promRegistry prometheus.Registerer,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
