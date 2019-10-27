@@ -2,7 +2,6 @@ package wireguardinterface
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 var (
@@ -15,5 +14,5 @@ var (
 )
 
 func init() {
-	metrics.Registry.MustRegister(peerCount)
+	prometheus.DefaultRegisterer.MustRegister(peerCount)
 }

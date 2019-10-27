@@ -46,7 +46,11 @@ func main() {
 		log.Panic("unable to parse pod cidr", zap.Error(err))
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{})
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		// Disable the integrated listener
+		// We have our own which also exposes pprof & health endpoints
+		MetricsBindAddress: "0",
+	})
 	if err != nil {
 		log.Panic("Unable to start manager", zap.Error(err))
 	}

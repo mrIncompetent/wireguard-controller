@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/heptiolabs/healthcheck"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -26,8 +27,13 @@ func Add(mgr ctrl.Manager, log *zap.Logger, listenAddress string) error {
 	health := healthcheck.NewMetricsHandler(metrics.Registry, "wireguard_controller")
 	router := http.NewServeMux()
 
+	registries := prometheus.Gatherers{
+		metrics.Registry,
+		prometheus.DefaultGatherer,
+	}
+
 	// Metrics
-	router.Handle("/metrics", promhttp.HandlerFor(metrics.Registry, promhttp.HandlerOpts{Timeout: 5 * time.Second}))
+	router.Handle("/metrics", promhttp.HandlerFor(registries, promhttp.HandlerOpts{Timeout: 5 * time.Second}))
 
 	// Liveness / Readiness
 	router.HandleFunc("/live", health.LiveEndpoint)
