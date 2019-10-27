@@ -18,6 +18,18 @@ rules:
       - watch
       - get
       - update
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -133,7 +145,7 @@ spec:
         app: wireguard-agent
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8081"
+        prometheus.io/port: "8082"
         prometheus.io/path: /metrics
         prometheus.io/scheme: "https"
     spec:
@@ -249,7 +261,7 @@ spec:
               mountPath: /cni-tpl
         - args:
             - --logtostderr
-            - --secure-listen-address=$(IP):8081
+            - --secure-listen-address=$(IP):8082
             - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
             - --upstream=http://127.0.0.1:8081/
           env:
@@ -260,8 +272,8 @@ spec:
           image: quay.io/coreos/kube-rbac-proxy:v0.4.1
           name: kube-rbac-proxy
           ports:
-            - containerPort: 8081
-              hostPort: 8081
+            - containerPort: 8082
+              hostPort: 8082
               name: https
       volumes:
         - name: wireguard
