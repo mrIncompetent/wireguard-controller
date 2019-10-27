@@ -19,8 +19,9 @@ If the node uses Ubuntu 18.04, WireGuard will be installed automatically.
 ## Building
 
 ```bash
-sudo podman build -t quay.io/mrincompetent/wireguard-controller:v0.1.0 .
-sudo podman push quay.io/mrincompetent/wireguard-controller:v0.1.0
+go build github.com/mrincompetent/wireguard-controller/cmd/controller
+sudo podman build -t quay.io/mrincompetent/wireguard-controller:v0.0.0-dev1 .
+sudo podman push quay.io/mrincompetent/wireguard-controller:v0.0.0-dev1
 ```
 
 ## FAQ
