@@ -31,6 +31,7 @@ func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimit
 	ticker := time.NewTicker(i.interval)
 	// Ensure we always add an initial event
 	queue.Add(staticRequest)
+
 	go func() {
 		for range ticker.C {
 			if queue.ShuttingDown() {
@@ -40,5 +41,6 @@ func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimit
 			queue.Add(staticRequest)
 		}
 	}()
+
 	return nil
 }

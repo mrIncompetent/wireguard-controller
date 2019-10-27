@@ -51,6 +51,7 @@ func Add(
 			wireguardPort:      wireGuardPort,
 		},
 	}
+
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
 		return err
@@ -65,14 +66,17 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log.Debug("Processing")
 
 	keylog := log.With(zap.String("private_key_file", r.privateKeyFilePath))
+
 	key, err := keyhelper.LoadPrivateKey(r.privateKeyFilePath)
 	if err != nil {
 		if keyhelper.IsPrivateKeyNotFound(err) {
 			keylog.Info("Generating a new private key")
+
 			key, err = keyhelper.GenerateKey(r.privateKeyFilePath)
 			if err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "unable to generate the private key")
 			}
+
 			keylog.Info("Successfully generated a new private key")
 		} else {
 			return ctrl.Result{}, errors.Wrap(err, "unable to load the private key")
@@ -110,6 +114,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	wireGuardEndpoint := fmt.Sprintf("%s:%d", nodeAddress.Address, r.wireguardPort)
+
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
 			return errors.Wrap(err, "unable to load own node")

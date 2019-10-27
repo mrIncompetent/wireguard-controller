@@ -1,7 +1,7 @@
 run:
   tests: false
 service:
-  golangci-lint-version: 1.17.1
+  golangci-lint-version: 1.21.0
 linters:
   enable-all: true
   disable:
@@ -37,3 +37,9 @@ linters-settings:
     disabled-checks:
       - wrapperFunc
       - dupImport # https://github.com/go-critic/go-critic/issues/845
+  funlen:
+    lines: 150
+    statements: 100
+issues:
+  exclude:
+    - Function 'main' is too long

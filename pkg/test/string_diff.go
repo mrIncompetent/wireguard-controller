@@ -14,10 +14,12 @@ func CompareStrings(t *testing.T, expected, got string) {
 		ToFile:   "Got",
 		Context:  3,
 	}
+
 	diffStr, err := difflib.GetUnifiedDiffString(diff)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if diffStr != "" {
 		t.Errorf("got diff between expected and actual result: \n%s\n", diffStr)
 	}

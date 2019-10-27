@@ -50,6 +50,7 @@ func SetPublicKey(node *corev1.Node, publicKey wgtypes.Key) bool {
 		node.Annotations[AnnotationKeyPublicKey] = publicKey.String()
 		return true
 	}
+
 	return false
 }
 
@@ -86,6 +87,7 @@ func SetEndpointAddress(node *corev1.Node, address string) bool {
 		node.Annotations[AnnotationKeyEndpoint] = address
 		return true
 	}
+
 	return false
 }
 
@@ -102,6 +104,7 @@ func (n Networks) String() string {
 	for _, network := range n {
 		s = append(s, network.String())
 	}
+
 	return strings.Join(s, ",")
 }
 
@@ -120,10 +123,12 @@ func AllowedNetworks(node *corev1.Node) (networks Networks, err error) {
 	if node.Spec.PodCIDR == "" {
 		return nil, PodCIDRIsEmptyError{}
 	}
+
 	_, podNet, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to parse pod CIDR")
 	}
+
 	networks = append(networks, *podNet)
 
 	return networks, nil
@@ -141,5 +146,6 @@ func GetPreferredAddress(node *corev1.Node, preferred []corev1.NodeAddressType) 
 			return addresses[preferredType]
 		}
 	}
+
 	return nil
 }

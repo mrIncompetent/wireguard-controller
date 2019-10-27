@@ -45,6 +45,7 @@ func Add(
 			nodeName:      nodeName,
 		},
 	}
+
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
 		return err
@@ -65,6 +66,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			log.Debug("Skipping route reconciling since the link is not up yet")
 			return ctrl.Result{}, nil
 		}
+
 		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
 	}
 
@@ -74,6 +76,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	var combinedErr error
+
 	for i := range nodeList.Items {
 		if nodeList.Items[i].Name == r.nodeName {
 			// Do not setup routes for the local node.
@@ -107,9 +110,11 @@ func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node *corev1
 	}
 
 	start := time.Now()
+
 	if err := netlink.RouteReplace(&route); err != nil {
 		return errors.Wrap(err, "unable to replace route")
 	}
+
 	routeReplaceLatency.Observe(time.Since(start).Seconds())
 
 	log.Debug("Replaced route", zap.String("route", route.String()))

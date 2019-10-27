@@ -43,6 +43,7 @@ func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int)
 		if err != nil {
 			return errors.Wrapf(err, "unable to check file '%s'", sourceFilename)
 		}
+
 		if fileInfo.IsDir() {
 			continue
 		}
@@ -52,6 +53,7 @@ func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int)
 			return errors.Wrapf(err, "unable to template file '%s'", sourceFilename)
 		}
 	}
+
 	return nil
 }
 
@@ -65,18 +67,21 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 	if err != nil {
 		return err
 	}
+
 	log.Debug("successfully read template file")
 
 	tpl, err := template.New(path.Base(sourceFilename)).Parse(string(content))
 	if err != nil {
 		return err
 	}
+
 	log.Debug("successfully parsed template file")
 
 	output := &bytes.Buffer{}
 	if err := tpl.Execute(output, data); err != nil {
 		return err
 	}
+
 	log.Debug("successfully executed the template")
 
 	currentContent, err := ioutil.ReadFile(targetFilename)
@@ -88,11 +93,13 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 		log.Debug("Not writing CNI config as its already up to date")
 		return nil
 	}
+
 	log.Info("CNI config does not match desired config, will override it")
 
 	if err := ioutil.WriteFile(targetFilename, output.Bytes(), 0644); err != nil {
 		return err
 	}
+
 	log.Info("Successfully wrote CNI config")
 
 	return nil

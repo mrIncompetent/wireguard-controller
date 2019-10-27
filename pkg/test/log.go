@@ -17,5 +17,6 @@ func Logger(dest io.Writer) *zap.Logger {
 		EncodeDuration: zapcore.StringDurationEncoder,
 	}
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderCfg), zapcore.AddSync(dest), zap.DebugLevel)
+
 	return zap.New(core)
 }

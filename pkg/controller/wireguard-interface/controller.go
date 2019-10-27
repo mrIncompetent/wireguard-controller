@@ -75,10 +75,12 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log.Debug("Processing")
 
 	var err error
+
 	key, exists, err := r.loadKey()
 	if err != nil {
 		return ctrl.Result{}, errors.Wrapf(err, "unable to load private key")
 	}
+
 	if !exists {
 		log.Debug("Skipping sync as the private key does not exist yet")
 		return ctrl.Result{}, nil
@@ -97,6 +99,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to create a new WireGuard client")
 	}
+
 	defer func() {
 		if closeErr := wgClient.Close(); closeErr != nil {
 			log.Error("unable to close the WireGuard client", zap.Error(closeErr))
@@ -107,6 +110,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
 	}
+
 	peerCount.Set(float64(len(device.Peers)))
 
 	interfaceConfig := wgtypes.Config{
@@ -123,12 +127,14 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Update & Remove existing peers
 	for i := range device.Peers {
 		peerLog := log.With(zap.String("peer", device.Peers[i].PublicKey.String()))
+
 		peerConfig, err := kubernetes.PeerConfigForExistingPeer(ctx, peerLog, r.Client, &device.Peers[i])
 		if err != nil {
 			reconfigureErrors = multierr.Append(
 				reconfigureErrors,
 				errors.Wrapf(err, "unable to get an updated peer config for peer '%s'", device.Peers[i].PublicKey.String()),
 			)
+
 			continue
 		}
 
@@ -142,6 +148,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	for i := range nodeList.Items {
 		nodeLog := log.With(zap.String("node", nodeList.Items[i].Name))
+
 		if nodeList.Items[i].Name == r.nodeName {
 			nodeLog.Debug("Skipping node as its the node we're running on")
 			continue
@@ -154,8 +161,10 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			} else {
 				reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to get the public key from node %s", nodeList.Items[i].Name))
 			}
+
 			continue
 		}
+
 		nodeLog = nodeLog.With(zap.String("public_key", pubKey.String()))
 
 		// If we already have a config for that node, we can skip here
@@ -169,11 +178,14 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				nodeLog.Debug("Skipping node: " + err.Error())
 				continue
 			}
+
 			reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to build the peer config for node %s", nodeList.Items[i].Name))
+
 			continue
 		}
 
 		peerConfigs[peerConfig.PublicKey.String()] = peerConfig
+
 		nodeLog.Info("Added a new peer config")
 	}
 

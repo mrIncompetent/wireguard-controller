@@ -46,6 +46,7 @@ func Add(
 			},
 		},
 	}
+
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
 		return err
@@ -80,6 +81,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			log.Debug("Skipping route reconciling since the link is not up yet")
 			return ctrl.Result{}, nil
 		}
+
 		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
 	}
 

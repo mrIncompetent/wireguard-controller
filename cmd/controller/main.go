@@ -38,16 +38,17 @@ func main() {
 	ctrl.SetLogger(zapr.NewLogger(log))
 
 	if *podCIDR == "" {
-		log.Fatal("pod-cidr must be set")
+		log.Panic("pod-cidr must be set")
 	}
+
 	_, podCidrNet, err := net.ParseCIDR(*podCIDR)
 	if err != nil {
-		log.Fatal("unable to parse pod cidr", zap.Error(err))
+		log.Panic("unable to parse pod cidr", zap.Error(err))
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{})
 	if err != nil {
-		log.Fatal("Unable to start manager", zap.Error(err))
+		log.Panic("Unable to start manager", zap.Error(err))
 	}
 
 	// We pass in a func to load the key as we generate it in a dedicated controller.
@@ -58,8 +59,10 @@ func main() {
 			if key.IsPrivateKeyNotFound(err) {
 				return nil, false, nil
 			}
+
 			return nil, false, err
 		}
+
 		return k, true, nil
 	}
 
@@ -71,7 +74,7 @@ func main() {
 		*nodeName,
 		loadKey,
 	); err != nil {
-		log.Fatal("Unable to add the WireGuard interface controller to the controller manager", zap.Error(err))
+		log.Panic("Unable to add the WireGuard interface controller to the controller manager", zap.Error(err))
 	}
 
 	if err := cniconfig.Add(
@@ -83,7 +86,7 @@ func main() {
 		podCidrNet,
 		*nodeName,
 	); err != nil {
-		log.Fatal("Unable to add the cni config controller to the controller manager", zap.Error(err))
+		log.Panic("Unable to add the cni config controller to the controller manager", zap.Error(err))
 	}
 
 	if err := route.Add(
@@ -92,7 +95,7 @@ func main() {
 		*interfaceName,
 		*nodeName,
 	); err != nil {
-		log.Fatal("Unable to add the route controller to the controller manager", zap.Error(err))
+		log.Panic("Unable to add the route controller to the controller manager", zap.Error(err))
 	}
 
 	if err := node.Add(
@@ -102,7 +105,7 @@ func main() {
 		*privateKeyPath,
 		*wireGuardPort,
 	); err != nil {
-		log.Fatal("Unable to add the node controller to the controller manager", zap.Error(err))
+		log.Panic("Unable to add the node controller to the controller manager", zap.Error(err))
 	}
 
 	if err := telemetry.Add(
@@ -110,12 +113,13 @@ func main() {
 		log,
 		*telemetryListenAddress,
 	); err != nil {
-		log.Fatal("Unable to add the telemetry server to the controller manager", zap.Error(err))
+		log.Panic("Unable to add the telemetry server to the controller manager", zap.Error(err))
 	}
 
 	log.Info("Starting manager")
+
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		log.Fatal("problem running manager", zap.Error(err))
+		log.Panic("problem running manager", zap.Error(err))
 	}
 }
 

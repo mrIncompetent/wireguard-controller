@@ -21,9 +21,11 @@ func publicKeyIndexFunc(o runtime.Object) []string {
 	if !ok {
 		return nil
 	}
+
 	if key := node.Annotations[AnnotationKeyPublicKey]; key != "" {
 		return []string{key}
 	}
+
 	return nil
 }
 
@@ -47,6 +49,7 @@ func GetNodeByPublicKey(ctx context.Context, c client.Reader, publicKey string) 
 			publicKey,
 		)
 	}
+
 	if len(nodeList.Items) > 1 {
 		return nil, errors.New(fmt.Sprintf("got more than 1 node with the public key: %s", publicKey))
 	}

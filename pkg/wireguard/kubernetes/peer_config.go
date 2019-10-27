@@ -37,8 +37,10 @@ func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig,
 		if IsPublicKeyNotFound(err) {
 			return nil, NodeNotInitializedError{err: err}
 		}
+
 		return nil, err
 	}
+
 	log = log.With(zap.String("node_public_key", key.String()))
 	log.Debug("Parsed the node's WireGuard public key")
 
@@ -47,8 +49,10 @@ func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig,
 		if IsEndpointNotFound(err) {
 			return nil, NodeNotInitializedError{err: err}
 		}
+
 		return nil, err
 	}
+
 	log = log.With(zap.String("endpoint", endpoint.String()))
 	log.Debug("Parsed the node's WireGuard endpoint")
 
@@ -56,6 +60,7 @@ func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig,
 	if err != nil {
 		return nil, err
 	}
+
 	log = log.With(zap.Stringer("allowed_networks", allowedNetworks))
 	log.Debug("Determined allowed node networks")
 
@@ -81,9 +86,12 @@ func PeerConfigForExistingPeer(ctx context.Context, log *zap.Logger, r client.Re
 		if kerrors.IsNotFound(err) {
 			// If the node does not exist anymore, delete the peer
 			log.Info("Marking peer for removal as the corresponding nodes does not exist anymore")
+
 			cfg.Remove = true
+
 			return cfg, nil
 		}
+
 		return nil, errors.Wrapf(err, "unable to get node by public key: %s", pubKey)
 	}
 
@@ -91,9 +99,12 @@ func PeerConfigForExistingPeer(ctx context.Context, log *zap.Logger, r client.Re
 	if err != nil {
 		return nil, err
 	}
+
 	log = log.With(zap.Stringer("allowed_networks", allowedNetworks))
+
 	if diff := deep.Equal(cfg.AllowedIPs, []net.IPNet(allowedNetworks)); diff != nil {
 		log.Info("Updating the peers allowed networks")
+
 		cfg.AllowedIPs = allowedNetworks
 	}
 
@@ -101,9 +112,12 @@ func PeerConfigForExistingPeer(ctx context.Context, log *zap.Logger, r client.Re
 	if err != nil {
 		return nil, err
 	}
+
 	log = log.With(zap.String("endpoint", endpoint.String()))
+
 	if cfg.Endpoint.String() != endpoint.String() {
 		log.Info("Updating the peers endpoint")
+
 		cfg.Endpoint = endpoint
 	}
 

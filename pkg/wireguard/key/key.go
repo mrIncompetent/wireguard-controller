@@ -32,12 +32,13 @@ func LoadPrivateKey(filePath string) (*wgtypes.Key, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to read private key")
 	}
+
 	privateKey, err := wgtypes.ParseKey(string(b))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to read parse private key")
 	}
-	return &privateKey, nil
 
+	return &privateKey, nil
 }
 
 func GenerateKey(filePath string) (*wgtypes.Key, error) {

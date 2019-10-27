@@ -66,7 +66,9 @@ func (h *healthHandler) Start(stop <-chan struct{}) error {
 
 	<-stop
 	h.log.Info("Stopping the telemetry server")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	return h.server.Shutdown(ctx)
 }
