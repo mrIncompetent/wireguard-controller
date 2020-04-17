@@ -1,6 +1,7 @@
 package source
 
 import (
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -10,10 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type IntervalSource struct {
-	interval time.Duration
-}
-
 var (
 	staticRequest = reconcile.Request{NamespacedName: types.NamespacedName{
 		Name:      "static",
@@ -21,27 +18,45 @@ var (
 	}}
 )
 
-func NewTickerSource(interval time.Duration) *IntervalSource {
+type IntervalSource struct {
+	interval time.Duration
+	stop     <-chan struct{}
+}
+
+func NewIntervalSource(interval time.Duration) *IntervalSource {
 	return &IntervalSource{
 		interval: interval,
 	}
 }
 
 func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+	if i.stop == nil {
+		return fmt.Errorf("must call InjectStop on IntervalSource before calling Start")
+	}
+
 	ticker := time.NewTicker(i.interval)
 	// Ensure we always add an initial event
 	queue.Add(staticRequest)
 
 	go func() {
-		for range ticker.C {
-			if queue.ShuttingDown() {
+		for {
+			select {
+			case <-ticker.C:
+				queue.Add(staticRequest)
+			case <-i.stop:
 				ticker.Stop()
 				return
 			}
-
-			queue.Add(staticRequest)
 		}
 	}()
+
+	return nil
+}
+
+func (i *IntervalSource) InjectStopChannel(stop <-chan struct{}) error {
+	if i.stop == nil {
+		i.stop = stop
+	}
 
 	return nil
 }

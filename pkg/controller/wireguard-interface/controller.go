@@ -26,15 +26,13 @@ const (
 	name = "wireguard_interface_controller"
 )
 
-type keyLoader func() (key *wgtypes.Key, exists bool, err error)
-
 func Add(
 	mgr ctrl.Manager,
 	log *zap.Logger,
 	interfaceName string,
 	listeningPort int,
 	nodeName string,
-	keyLoader keyLoader,
+	keyStore KeyStore,
 	promRegistry prometheus.Registerer,
 ) error {
 	m := &metrics{
@@ -58,7 +56,7 @@ func Add(
 			listeningPort: listeningPort,
 			interfaceName: interfaceName,
 			nodeName:      nodeName,
-			loadKey:       keyLoader,
+			keyStore:      keyStore,
 			metrics:       m,
 		},
 	}
@@ -72,7 +70,12 @@ func Add(
 		return err
 	}
 
-	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
+	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
+}
+
+type KeyStore interface {
+	HasKey() bool
+	Get() wgtypes.Key
 }
 
 type Reconciler struct {
@@ -81,8 +84,8 @@ type Reconciler struct {
 	listeningPort int
 	nodeName      string
 	interfaceName string
-	loadKey       keyLoader
 	metrics       *metrics
+	keyStore      KeyStore
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -92,15 +95,13 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	var err error
 
-	key, exists, err := r.loadKey()
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("unable to load private key: %w", err)
+	if !r.keyStore.HasKey() {
+		log.Debug("Requeueing as the private key does not exist yet")
+
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
 
-	if !exists {
-		log.Debug("Skipping sync as the private key does not exist yet")
-		return ctrl.Result{}, nil
-	}
+	key := r.keyStore.Get()
 
 	ownNode := &corev1.Node{}
 	if err = r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, ownNode); err != nil {
@@ -130,7 +131,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.metrics.peerCount.Set(float64(len(device.Peers)))
 
 	interfaceConfig := wgtypes.Config{
-		PrivateKey: key,
+		PrivateKey: &key,
 		ListenPort: &r.listeningPort,
 	}
 

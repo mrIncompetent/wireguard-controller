@@ -5,16 +5,16 @@ import (
 	"net"
 
 	cniconfig "github.com/mrincompetent/wireguard-controller/pkg/controller/cni-config"
+	"github.com/mrincompetent/wireguard-controller/pkg/controller/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/node"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/route"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/telemetry"
 	wireguard_interface "github.com/mrincompetent/wireguard-controller/pkg/controller/wireguard-interface"
-	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
+	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 
 	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -57,20 +57,7 @@ func main() {
 		log.Panic("Unable to start manager", zap.Error(err))
 	}
 
-	// We pass in a func to load the key as we generate it in a dedicated controller.
-	// Also we handle the not found error here to avoid importing a new dependency
-	loadKey := func() (*wgtypes.Key, bool, error) {
-		k, err := key.LoadPrivateKey(*privateKeyPath)
-		if err != nil {
-			if key.IsPrivateKeyNotFound(err) {
-				return nil, false, nil
-			}
-
-			return nil, false, err
-		}
-
-		return k, true, nil
-	}
+	keyStore := keyhelper.New()
 
 	if err := wireguard_interface.Add(
 		mgr,
@@ -78,7 +65,7 @@ func main() {
 		*interfaceName,
 		*wireGuardPort,
 		*nodeName,
-		loadKey,
+		keyStore,
 		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the WireGuard interface controller to the controller manager", zap.Error(err))
@@ -111,8 +98,8 @@ func main() {
 		mgr,
 		log,
 		*nodeName,
-		*privateKeyPath,
 		*wireGuardPort,
+		keyStore,
 		promRegistry,
 	); err != nil {
 		log.Panic("Unable to add the node controller to the controller manager", zap.Error(err))
@@ -125,6 +112,16 @@ func main() {
 		*telemetryListenAddress,
 	); err != nil {
 		log.Panic("Unable to add the telemetry server to the controller manager", zap.Error(err))
+	}
+
+	if err := key.Add(
+		mgr,
+		log,
+		*privateKeyPath,
+		keyStore,
+		promRegistry,
+	); err != nil {
+		log.Panic("Unable to add the key controller to the controller manager", zap.Error(err))
 	}
 
 	log.Info("Starting manager")

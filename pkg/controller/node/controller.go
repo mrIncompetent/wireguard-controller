@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
-	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -26,30 +26,35 @@ const (
 	name = "node_controller"
 )
 
+type KeyStore interface {
+	HasKey() bool
+	Get() wgtypes.Key
+}
+
 type Reconciler struct {
 	client.Client
-	log                *zap.Logger
-	nodeName           string
-	privateKeyFilePath string
-	wireguardPort      int
+	log           *zap.Logger
+	nodeName      string
+	wireguardPort int
+	keyStore      KeyStore
 }
 
 func Add(
 	mgr ctrl.Manager,
 	log *zap.Logger,
-	nodeName,
-	privateKeyFilePath string,
+	nodeName string,
 	wireGuardPort int,
+	keyStore KeyStore,
 	promRegistry prometheus.Registerer,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &Reconciler{
-			Client:             mgr.GetClient(),
-			log:                log.Named(name),
-			nodeName:           nodeName,
-			privateKeyFilePath: privateKeyFilePath,
-			wireguardPort:      wireGuardPort,
+			Client:        mgr.GetClient(),
+			log:           log.Named(name),
+			nodeName:      nodeName,
+			wireguardPort: wireGuardPort,
+			keyStore:      keyStore,
 		},
 	}
 
@@ -58,7 +63,7 @@ func Add(
 		return err
 	}
 
-	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
+	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -66,30 +71,20 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.With(zap.String("sync_id", rand.String(12)))
 	log.Debug("Processing")
 
-	keylog := log.With(zap.String("private_key_file", r.privateKeyFilePath))
+	if !r.keyStore.HasKey() {
+		log.Debug("Requeueing as the private key does not exist yet")
 
-	key, err := keyhelper.LoadPrivateKey(r.privateKeyFilePath)
-	if err != nil {
-		if keyhelper.IsPrivateKeyNotFound(err) {
-			keylog.Info("Generating a new private key")
-
-			key, err = keyhelper.GenerateKey(r.privateKeyFilePath)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("unable to generate the private key: %w", err)
-			}
-
-			keylog.Info("Successfully generated a new private key")
-		} else {
-			return ctrl.Result{}, fmt.Errorf("unable to load the private key: %w", err)
-		}
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
+
+	key := r.keyStore.Get()
 
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to load own node: %w", err)
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
 			return fmt.Errorf("unable to load own node: %w", err)
 		}

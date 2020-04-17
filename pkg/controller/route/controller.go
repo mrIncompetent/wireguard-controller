@@ -69,7 +69,7 @@ func Add(
 		return err
 	}
 
-	return c.Watch(source.NewTickerSource(5*time.Second), &handler.EnqueueRequestForObject{})
+	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
 }
 
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
