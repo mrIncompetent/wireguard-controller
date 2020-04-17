@@ -1,22 +1,25 @@
 module github.com/mrincompetent/wireguard-controller
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-logr/zapr v0.1.1
-	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
+	github.com/go-test/deep v1.0.5
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/pkg/errors v0.8.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
-	github.com/prometheus/client_golang v0.9.0
-	github.com/vishvananda/netlink v1.0.1-0.20190608042107-0f040b9e2cdf
-	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
+	github.com/prometheus/client_golang v1.5.1
+	github.com/vishvananda/netlink v1.1.0
 	go.uber.org/multierr v1.1.0
-	go.uber.org/zap v1.9.1
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190607034155-226bf4e412cd
-	k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
-	k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d
-	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
-	sigs.k8s.io/controller-runtime v0.2.2
+	go.uber.org/zap v1.10.0
+	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904 // indirect
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
+	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
+	golang.zx2c4.com/wireguard v0.0.20200320 // indirect
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
+	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
+	k8s.io/api v0.17.4
+	k8s.io/apimachinery v0.17.4
+	k8s.io/client-go v0.17.4
+	sigs.k8s.io/controller-runtime v0.5.2
 )
