@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -75,23 +75,23 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 			key, err = keyhelper.GenerateKey(r.privateKeyFilePath)
 			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "unable to generate the private key")
+				return ctrl.Result{}, fmt.Errorf("unable to generate the private key: %w", err)
 			}
 
 			keylog.Info("Successfully generated a new private key")
 		} else {
-			return ctrl.Result{}, errors.Wrap(err, "unable to load the private key")
+			return ctrl.Result{}, fmt.Errorf("unable to load the private key: %w", err)
 		}
 	}
 
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
+		return ctrl.Result{}, fmt.Errorf("unable to load own node: %w", err)
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
-			return errors.Wrap(err, "unable to load own node")
+			return fmt.Errorf("unable to load own node: %w", err)
 		}
 
 		if kubernetes.SetPublicKey(node, key.PublicKey()) {
@@ -103,13 +103,13 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return nil
 	})
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to store the public key on the node object")
+		return ctrl.Result{}, fmt.Errorf("unable to store the public key on the node object: %w", err)
 	}
 
 	nodeAddress := kubernetes.GetPreferredAddress(node, []corev1.NodeAddressType{corev1.NodeInternalIP, corev1.NodeExternalIP})
 	if nodeAddress == nil {
 		return ctrl.Result{}, errors.New(
-			"The node, this agent is running on, does not have a usable address. " +
+			"the node, this agent is running on, does not have a usable address. " +
 				"Only the following address types can be used: InternalIP, ExternalIP",
 		)
 	}
@@ -118,7 +118,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
-			return errors.Wrap(err, "unable to load own node")
+			return fmt.Errorf("unable to load own node: %w", err)
 		}
 
 		if kubernetes.SetEndpointAddress(node, wireGuardEndpoint) {
@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return nil
 	})
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to store the WireGuard endpoint on the node object")
+		return ctrl.Result{}, fmt.Errorf("unable to store the WireGuard endpoint on the node object: %w", err)
 	}
 
 	return ctrl.Result{}, nil

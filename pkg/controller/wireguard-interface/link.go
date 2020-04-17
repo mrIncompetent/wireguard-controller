@@ -6,7 +6,6 @@ import (
 
 	wgnetlink "github.com/mrincompetent/wireguard-controller/pkg/wireguard/netlink"
 
-	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +15,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 	link, err := netlink.LinkByName(r.interfaceName)
 	if err != nil {
 		if _, isNotFoundErr := err.(netlink.LinkNotFoundError); !isNotFoundErr {
-			return errors.WithMessagef(err, "unable to get the interface %s", r.interfaceName)
+			return fmt.Errorf("unable to get the interface %s: %w", r.interfaceName, err)
 		}
 
 		log.Info("WireGuard interface does not exist. Creating...")
@@ -29,7 +28,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 		}
 
 		if err = netlink.LinkAdd(link); err != nil {
-			return errors.Wrap(err, "unable to create the interface")
+			return fmt.Errorf("unable to create the interface: %w", err)
 		}
 
 		log.Info("Created the WireGuard interface")
@@ -37,7 +36,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 
 	nodePodCidrIP, _, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse node pod cidr")
+		return fmt.Errorf("unable to parse node pod cidr: %w", err)
 	}
 
 	wgIP := net.ParseIP(nodePodCidrIP.String())
@@ -45,12 +44,12 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 
 	wireGuardAddress, err := netlink.ParseAddr(fmt.Sprintf("%s/32", wgIP.String()))
 	if err != nil {
-		return errors.Wrap(err, "unable to parse the WireGuard address")
+		return fmt.Errorf("unable to parse the WireGuard address: %w", err)
 	}
 
 	addresses, err := netlink.AddrList(link, netlink.FAMILY_V4)
 	if err != nil {
-		return errors.Wrap(err, "unable to list interface addresses")
+		return fmt.Errorf("unable to list interface addresses: %w", err)
 	}
 
 	var found bool
@@ -64,7 +63,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 
 	if !found {
 		if err := netlink.AddrAdd(link, wireGuardAddress); err != nil {
-			return errors.Wrap(err, "unable to set address on the interface")
+			return fmt.Errorf("unable to set address on the interface: %w", err)
 		}
 
 		log.Info("Configured address on WireGuard interface", zap.String("wireguard_address", wireGuardAddress.String()))
@@ -74,7 +73,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 		stateBefore := link.Attrs().OperState
 
 		if err := netlink.LinkSetUp(link); err != nil {
-			return errors.Wrap(err, "unable to bring up the interface")
+			return fmt.Errorf("unable to bring up the interface: %w", err)
 		}
 
 		// For some reason the interface state is unknown after bringing it up.

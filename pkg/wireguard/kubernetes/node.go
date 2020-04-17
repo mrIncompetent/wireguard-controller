@@ -5,7 +5,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -34,7 +33,7 @@ func PublicKey(node *corev1.Node) (key wgtypes.Key, err error) {
 
 	key, err = wgtypes.ParseKey(sKey)
 	if err != nil {
-		return wgtypes.Key{}, errors.Wrapf(err, "could not parse public key found in annotation '%s:%s'", AnnotationKeyPublicKey, sKey)
+		return wgtypes.Key{}, fmt.Errorf("could not parse public key '%s' found in annotation '%s': %w", sKey, AnnotationKeyPublicKey, err)
 	}
 
 	return key, nil
@@ -72,7 +71,7 @@ func EndpointAddress(node *corev1.Node) (addr *net.UDPAddr, err error) {
 
 	addr, err = net.ResolveUDPAddr("udp", node.Annotations[AnnotationKeyEndpoint])
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to resolve UDP address")
+		return nil, fmt.Errorf("unable to resolve UDP address: %w", err)
 	}
 
 	return addr, nil
@@ -126,7 +125,7 @@ func AllowedNetworks(node *corev1.Node) (networks Networks, err error) {
 
 	_, podNet, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to parse pod CIDR")
+		return nil, fmt.Errorf("unable to parse pod CIDR: %w", err)
 	}
 
 	networks = append(networks, *podNet)

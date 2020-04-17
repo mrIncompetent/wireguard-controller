@@ -6,7 +6,6 @@ import (
 	"net"
 
 	"github.com/go-test/deep"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +91,7 @@ func PeerConfigForExistingPeer(ctx context.Context, log *zap.Logger, r client.Re
 			return cfg, nil
 		}
 
-		return nil, errors.Wrapf(err, "unable to get node by public key: %s", pubKey)
+		return nil, fmt.Errorf("unable to get node by public key: %s: %w", pubKey, err)
 	}
 
 	allowedNetworks, err := AllowedNetworks(node)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +35,7 @@ func RegisterPublicKeyIndexer(indexer client.FieldIndexer) error {
 func GetNodeByPublicKey(ctx context.Context, c client.Reader, publicKey string) (*corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
 	if err := c.List(ctx, nodeList, client.MatchingFields{indexFieldPublicKey: publicKey}); err != nil {
-		return nil, errors.Wrap(err, "unable to list nodes")
+		return nil, fmt.Errorf("unable to list nodes: %w", err)
 	}
 
 	if len(nodeList.Items) == 0 {
@@ -51,7 +50,7 @@ func GetNodeByPublicKey(ctx context.Context, c client.Reader, publicKey string) 
 	}
 
 	if len(nodeList.Items) > 1 {
-		return nil, errors.New(fmt.Sprintf("got more than 1 node with the public key: %s", publicKey))
+		return nil, fmt.Errorf("got more than 1 node with the public key: %s", publicKey)
 	}
 
 	return &nodeList.Items[0], nil

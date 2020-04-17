@@ -2,12 +2,12 @@ package cniconfig
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
@@ -84,16 +84,16 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
+		return ctrl.Result{}, fmt.Errorf("unable to get interface details: %w", err)
 	}
 
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, node); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
+		return ctrl.Result{}, fmt.Errorf("unable to load own node: %w", err)
 	}
 
 	if err := r.writeCNIConfig(log, node, link.Attrs().MTU); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to write CNI config")
+		return ctrl.Result{}, fmt.Errorf("unable to write CNI config: %w", err)
 	}
 
 	return ctrl.Result{}, nil

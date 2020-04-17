@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -30,12 +29,12 @@ func LoadPrivateKey(filePath string) (*wgtypes.Key, error) {
 
 	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to read private key")
+		return nil, fmt.Errorf("unable to read private key: %w", err)
 	}
 
 	privateKey, err := wgtypes.ParseKey(string(b))
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to read parse private key")
+		return nil, fmt.Errorf("unable to read parse private key: %w", err)
 	}
 
 	return &privateKey, nil
@@ -44,11 +43,11 @@ func LoadPrivateKey(filePath string) (*wgtypes.Key, error) {
 func GenerateKey(filePath string) (*wgtypes.Key, error) {
 	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to generate key")
+		return nil, fmt.Errorf("unable to generate key: %w", err)
 	}
 
 	if err := ioutil.WriteFile(filePath, []byte(privateKey.String()), 0400); err != nil {
-		return nil, errors.Wrap(err, "unable to write private key")
+		return nil, fmt.Errorf("unable to write private key: %w", err)
 	}
 
 	return &privateKey, nil

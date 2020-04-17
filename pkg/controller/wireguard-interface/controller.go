@@ -2,12 +2,12 @@ package wireguardinterface
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -47,7 +47,7 @@ func Add(
 	}
 
 	if err := m.Register(promRegistry); err != nil {
-		return errors.Wrap(err, "unable to register metrics")
+		return fmt.Errorf("unable to register metrics: %w", err)
 	}
 
 	options := controller.Options{
@@ -64,7 +64,7 @@ func Add(
 	}
 
 	if err := kubernetes.RegisterPublicKeyIndexer(mgr.GetFieldIndexer()); err != nil {
-		return errors.Wrap(err, "unable to register the public key indexer")
+		return fmt.Errorf("unable to register the public key indexer: %w", err)
 	}
 
 	c, err := controller.New(name, mgr, options)
@@ -94,7 +94,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	key, exists, err := r.loadKey()
 	if err != nil {
-		return ctrl.Result{}, errors.Wrapf(err, "unable to load private key")
+		return ctrl.Result{}, fmt.Errorf("unable to load private key: %w", err)
 	}
 
 	if !exists {
@@ -104,16 +104,16 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	ownNode := &corev1.Node{}
 	if err = r.Client.Get(ctx, types.NamespacedName{Name: r.nodeName}, ownNode); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to load own node")
+		return ctrl.Result{}, fmt.Errorf("unable to load own node: %w", err)
 	}
 
 	if err = r.configureInterface(log, ownNode); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to configure WireGuard interface")
+		return ctrl.Result{}, fmt.Errorf("unable to configure WireGuard interface: %w", err)
 	}
 
 	wgClient, err := wgctrl.New()
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to create a new WireGuard client")
+		return ctrl.Result{}, fmt.Errorf("unable to create a new WireGuard client: %w", err)
 	}
 
 	defer func() {
@@ -124,7 +124,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	device, err := wgClient.Device(r.interfaceName)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
+		return ctrl.Result{}, fmt.Errorf("unable to get WireGuard interface: %w", err)
 	}
 
 	r.metrics.peerCount.Set(float64(len(device.Peers)))
@@ -148,7 +148,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			reconfigureErrors = multierr.Append(
 				reconfigureErrors,
-				errors.Wrapf(err, "unable to get an updated peer config for peer '%s'", device.Peers[i].PublicKey.String()),
+				fmt.Errorf("unable to get an updated peer config for peer '%s': %w", device.Peers[i].PublicKey.String(), err),
 			)
 
 			continue
@@ -159,7 +159,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	nodeList := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodeList); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to get WireGuard interface")
+		return ctrl.Result{}, fmt.Errorf("unable to get WireGuard interface: %w", err)
 	}
 
 	for i := range nodeList.Items {
@@ -175,7 +175,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if kubernetes.IsPublicKeyNotFound(err) {
 				nodeLog.Debug("Skipping node as its missing infos: " + err.Error())
 			} else {
-				reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to get the public key from node %s", nodeList.Items[i].Name))
+				reconfigureErrors = multierr.Append(reconfigureErrors, fmt.Errorf("unable to get the public key from node %s: %w", nodeList.Items[i].Name, err))
 			}
 
 			continue
@@ -195,7 +195,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				continue
 			}
 
-			reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrapf(err, "unable to build the peer config for node %s", nodeList.Items[i].Name))
+			reconfigureErrors = multierr.Append(reconfigureErrors, fmt.Errorf("unable to build the peer config for node %s: %w", nodeList.Items[i].Name, err))
 
 			continue
 		}
@@ -210,7 +210,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if err := wgClient.ConfigureDevice(r.interfaceName, interfaceConfig); err != nil {
-		reconfigureErrors = multierr.Append(reconfigureErrors, errors.Wrap(err, "unable to reconfigure interface"))
+		reconfigureErrors = multierr.Append(reconfigureErrors, fmt.Errorf("unable to reconfigure interface: %w", err))
 	}
 
 	return ctrl.Result{}, reconfigureErrors

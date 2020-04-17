@@ -2,12 +2,12 @@ package route
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/multierr"
@@ -50,7 +50,7 @@ func Add(
 	}
 
 	if err := m.Register(promRegistry); err != nil {
-		return errors.Wrap(err, "unable to register metrics")
+		return fmt.Errorf("unable to register metrics: %w", err)
 	}
 
 	options := controller.Options{
@@ -85,12 +85,12 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, errors.Wrap(err, "unable to get interface details")
+		return ctrl.Result{}, fmt.Errorf("unable to get interface details: %w", err)
 	}
 
 	nodeList := &corev1.NodeList{}
 	if err := r.List(ctx, nodeList); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to list nodes")
+		return ctrl.Result{}, fmt.Errorf("unable to list nodes: %w", err)
 	}
 
 	var combinedErr error
@@ -103,7 +103,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		nodeLog := log.With(zap.String("node", nodeList.Items[i].Name))
 		if err := r.setupRoute(nodeLog, link, &nodeList.Items[i]); err != nil {
-			combinedErr = multierr.Append(combinedErr, errors.WithMessagef(err, "unable to setup route for node '%s'", nodeList.Items[i].Name))
+			combinedErr = multierr.Append(combinedErr, fmt.Errorf("unable to setup route for node '%s': %w", nodeList.Items[i].Name, err))
 			continue
 		}
 	}
@@ -118,7 +118,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node *corev1.Node) error {
 	_, podCIDRNet, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse pod CIDR")
+		return fmt.Errorf("unable to parse pod CIDR: %w", err)
 	}
 
 	route := netlink.Route{
@@ -130,7 +130,7 @@ func (r *Reconciler) setupRoute(log *zap.Logger, link netlink.Link, node *corev1
 	start := time.Now()
 
 	if err := netlink.RouteReplace(&route); err != nil {
-		return errors.Wrap(err, "unable to replace route")
+		return fmt.Errorf("unable to replace route: %w", err)
 	}
 
 	r.metrics.routeReplaceLatency.Observe(time.Since(start).Seconds())

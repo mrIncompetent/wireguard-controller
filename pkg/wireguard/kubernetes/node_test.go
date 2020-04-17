@@ -147,7 +147,7 @@ func TestPublicKey(t *testing.T) {
 		{
 			name:        "invalid key",
 			node:        nodeWithPublicKey("not-valid"),
-			expectedErr: errors.New("could not parse public key found in annotation 'wireguard/public_key:not-valid': wgtypes: failed to parse base64-encoded key: illegal base64 data at input byte 3"),
+			expectedErr: errors.New("could not parse public key 'not-valid' found in annotation 'wireguard/public_key': wgtypes: failed to parse base64-encoded key: illegal base64 data at input byte 3"),
 		},
 		{
 			name:        "no key",

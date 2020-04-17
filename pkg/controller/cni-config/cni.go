@@ -2,13 +2,13 @@ package cniconfig
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"path"
 	"text/template"
 
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -22,7 +22,7 @@ type tplData struct {
 func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int) error {
 	_, nodePodCidr, err := net.ParseCIDR(node.Spec.PodCIDR)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse node pod cidr")
+		return fmt.Errorf("unable to parse node pod cidr: %w", err)
 	}
 
 	data := tplData{
@@ -33,7 +33,7 @@ func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int)
 
 	files, err := ioutil.ReadDir(path.Clean(r.cni.TemplateDir))
 	if err != nil {
-		return errors.Wrap(err, "unable to list template files")
+		return fmt.Errorf("unable to list template files: %w", err)
 	}
 
 	for _, file := range files {
@@ -41,7 +41,7 @@ func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int)
 		// ioutil.ReadDir uses LState which does not follow symlinks - So symlinked directories will return false on IsDir
 		fileInfo, err := os.Stat(sourceFilename)
 		if err != nil {
-			return errors.Wrapf(err, "unable to check file '%s'", sourceFilename)
+			return fmt.Errorf("unable to check file '%s': %w", sourceFilename, err)
 		}
 
 		if fileInfo.IsDir() {
@@ -50,7 +50,7 @@ func (r *Reconciler) writeCNIConfig(log *zap.Logger, node *corev1.Node, mtu int)
 
 		targetFilename := path.Join(r.cni.TargetDir, fileInfo.Name())
 		if err := templateFile(log, sourceFilename, targetFilename, data); err != nil {
-			return errors.Wrapf(err, "unable to template file '%s'", sourceFilename)
+			return fmt.Errorf("unable to template file '%s': %w", sourceFilename, err)
 		}
 	}
 
