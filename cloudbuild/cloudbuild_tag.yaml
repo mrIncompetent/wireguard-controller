@@ -1,5 +1,5 @@
 steps:
-  - name: 'golang:1.13.3-alpine'
+  - name: 'golang:1.14.2-alpine'
     args: ['go', 'build', '-o', 'wireguard-controller', 'github.com/mrincompetent/wireguard-controller/cmd/controller']
   - name: 'gcr.io/cloud-builders/docker'
     env: ['CGO_ENABLED=0']
