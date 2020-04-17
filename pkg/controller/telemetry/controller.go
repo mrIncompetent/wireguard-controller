@@ -63,6 +63,7 @@ func Add(mgr ctrl.Manager, log *zap.Logger, promRegistry prometheus.Gatherer, li
 func (h *healthHandler) Start(stop <-chan struct{}) error {
 	go func() {
 		h.log.Info("Starting the telemetry server")
+
 		if err := h.server.ListenAndServe(); err != nil {
 			if err != http.ErrServerClosed {
 				h.log.Error("Failed to start the http server", zap.Error(err))
