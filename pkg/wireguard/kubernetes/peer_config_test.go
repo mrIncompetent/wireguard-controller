@@ -1,13 +1,13 @@
 package kubernetes
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"testing"
 
 	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/go-test/deep"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -26,7 +26,6 @@ func TestGetPeerConfigForNode(t *testing.T) {
 		node            *corev1.Node
 		expectedPeerCfg *wgtypes.PeerConfig
 		expectedErr     error
-		expectedLog     string
 	}{
 		{
 			name: "test with valid node",
@@ -61,10 +60,6 @@ func TestGetPeerConfigForNode(t *testing.T) {
 					getNet(t, "10.244.0.0/24"),
 				},
 			},
-			expectedLog: `debug	peer_config	Parsed the node's WireGuard public key	{"pod_cidr": "10.244.0.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw="}
-debug	peer_config	Parsed the node's WireGuard endpoint	{"pod_cidr": "10.244.0.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw=", "endpoint": "192.168.1.1:51820"}
-debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.0.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw=", "endpoint": "192.168.1.1:51820", "allowed_networks": "192.168.1.1/32,10.244.0.0/24"}
-`,
 		},
 		{
 			name: "test second node with different pod cidr",
@@ -99,10 +94,6 @@ debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.0.0/24",
 					getNet(t, "10.244.1.0/24"),
 				},
 			},
-			expectedLog: `debug	peer_config	Parsed the node's WireGuard public key	{"pod_cidr": "10.244.1.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw="}
-debug	peer_config	Parsed the node's WireGuard endpoint	{"pod_cidr": "10.244.1.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw=", "endpoint": "192.168.1.2:51820"}
-debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.1.0/24", "node_public_key": "4Uz+l6VDzs4LCwPv4eCuPg2DTROOqjgHF/Ic3lPeYgw=", "endpoint": "192.168.1.2:51820", "allowed_networks": "192.168.1.2/32,10.244.1.0/24"}
-`,
 		},
 		{
 			name: "invalid pod cidr",
@@ -127,7 +118,6 @@ debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.1.0/24",
 				},
 			},
 			expectedErr: errors.New("unable to parse pod CIDR: invalid CIDR address: AAA"),
-			expectedLog: ``,
 		},
 		{
 			name: "invalid WireGuard endpoint",
@@ -152,18 +142,12 @@ debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.1.0/24",
 				},
 			},
 			expectedErr: errors.New("unable to resolve UDP address: address AAAA: missing port in address"),
-			expectedLog: ``,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			logOutput := &bytes.Buffer{}
-			log := testhelper.Logger(logOutput)
-			defer t.Log(logOutput.String())
-			defer log.Sync()
-
-			peerCfg, err := PeerConfigForNode(log, test.node)
+			peerCfg, err := PeerConfigForNode(zaptest.NewLogger(t), test.node)
 			testhelper.CompareStrings(t, fmt.Sprint(test.expectedErr), fmt.Sprint(err))
 			if test.expectedErr != nil {
 				return
@@ -172,10 +156,6 @@ debug	peer_config	Determined allowed node networks	{"pod_cidr": "10.244.1.0/24",
 			if diff := deep.Equal(test.expectedPeerCfg, peerCfg); diff != nil {
 				t.Errorf("got peerCfg does not match the expectedPeerCfg. Diff: \n%v", diff)
 			}
-
-			// Test log output
-			log.Sync()
-			testhelper.CompareStrings(t, test.expectedLog, logOutput.String())
 		})
 	}
 }

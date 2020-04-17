@@ -1,7 +1,6 @@
 package cniconfig
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +8,7 @@ import (
 	"testing"
 
 	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestTemplateFile(t *testing.T) {
@@ -18,7 +18,6 @@ func TestTemplateFile(t *testing.T) {
 		tpl            string
 		expectedResult string
 		expectedErr    error
-		expectedLog    string
 	}{
 		{
 			name: "simple template",
@@ -27,12 +26,6 @@ func TestTemplateFile(t *testing.T) {
 				PodCIDR: "10.244.1.0/24",
 			},
 			expectedResult: "Foo 10.244.1.0/24 Bar",
-			expectedLog: `debug	successfully read template file	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-debug	successfully parsed template file	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-debug	successfully executed the template	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-info	CNI config does not match desired config, will override it	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-info	Successfully wrote CNI config	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-`,
 		},
 		{
 			name: "broken template",
@@ -40,8 +33,6 @@ info	Successfully wrote CNI config	{"template_source": "/tmp/wireguard-controlle
 			data: tplData{
 				PodCIDR: "10.244.1.0/24",
 			},
-			expectedLog: `debug	successfully read template file	{"template_source": "/tmp/wireguard-controller-test-tpl.conf", "template_target": "/tmp/wireguard-controller-test.conf"}
-`,
 			expectedErr: errors.New(`template: wireguard-controller-test-tpl.conf:1: function "BROKEN_SHOULD_NOT_WORK" not defined`),
 		},
 	}
@@ -65,11 +56,7 @@ info	Successfully wrote CNI config	{"template_source": "/tmp/wireguard-controlle
 			}
 			defer os.Remove(targetFile.Name())
 
-			logOutput := &bytes.Buffer{}
-			log := testhelper.Logger(logOutput)
-			defer log.Sync()
-
-			err = templateFile(log, srcFile.Name(), targetFile.Name(), test.data)
+			err = templateFile(zaptest.NewLogger(t), srcFile.Name(), targetFile.Name(), test.data)
 			if fmt.Sprint(err) != fmt.Sprint(test.expectedErr) {
 				t.Error(err)
 			}
@@ -83,10 +70,6 @@ info	Successfully wrote CNI config	{"template_source": "/tmp/wireguard-controlle
 			}
 
 			testhelper.CompareStrings(t, test.expectedResult, string(content))
-
-			// Test log output
-			log.Sync()
-			testhelper.CompareStrings(t, test.expectedLog, logOutput.String())
 		})
 	}
 }
