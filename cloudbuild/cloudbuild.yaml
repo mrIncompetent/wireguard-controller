@@ -16,6 +16,7 @@ steps:
         path: '/go'
   - name: 'golangci/golangci-lint:v1.24.0'
     args: ['golangci-lint', 'run']
+    env: ['GOGC=5']
     volumes:
       - name: 'gopath'
         path: '/go'
