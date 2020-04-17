@@ -15,7 +15,6 @@ linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
-    exclude: errcheck-excludes.txt
   golint:
     min-confidence: 0
   gocyclo:

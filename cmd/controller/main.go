@@ -35,7 +35,6 @@ func main() {
 	flag.Parse()
 
 	log := ctrlzap.NewRaw(enableDevelopment(*development))
-	defer log.Sync()
 	ctrl.SetLogger(zapr.NewLogger(log))
 
 	promRegistry := prometheus.NewRegistry()
