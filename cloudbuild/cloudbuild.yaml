@@ -4,8 +4,8 @@ steps:
     volumes:
       - name: 'gopath'
         path: '/go'
-  - name: 'golang:1.14.2-alpine'
-    args: ['go', 'build', '-o', 'wireguard-controller', 'github.com/mrincompetent/wireguard-controller/cmd/controller']
+  - name: 'golangci/golangci-lint:v1.23.8'
+    args: ['golangci-lint', 'run']
     volumes:
       - name: 'gopath'
         path: '/go'
@@ -14,8 +14,8 @@ steps:
     volumes:
       - name: 'gopath'
         path: '/go'
-  - name: 'golangci/golangci-lint:v1.24.0'
-    args: ['golangci-lint', 'run']
+  - name: 'golang:1.14.2-alpine'
+    args: ['go', 'build', '-o', 'wireguard-controller', 'github.com/mrincompetent/wireguard-controller/cmd/controller']
     volumes:
       - name: 'gopath'
         path: '/go'
@@ -37,7 +37,6 @@ images:
   - 'quay.io/mrincompetent/wireguard-controller:$COMMIT_SHA'
 options:
   env: ['CGO_ENABLED=0']
-  machineType: 'N1_HIGHCPU_8'
 secrets:
   - kmsKeyName: projects/henrik-221510/locations/global/keyRings/build-wireguard-controller/cryptoKeys/enc-key1
     secretEnv:
