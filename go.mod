@@ -17,7 +17,7 @@ require (
 	golang.zx2c4.com/wireguard v0.0.20200320 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
-	k8s.io/api v0.17.4
+	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v0.17.4
 	sigs.k8s.io/controller-runtime v0.5.2
