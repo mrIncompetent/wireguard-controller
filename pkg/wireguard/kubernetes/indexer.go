@@ -28,8 +28,8 @@ func publicKeyIndexFunc(o runtime.Object) []string {
 	return nil
 }
 
-func RegisterPublicKeyIndexer(indexer client.FieldIndexer) error {
-	return indexer.IndexField(&corev1.Node{}, indexFieldPublicKey, publicKeyIndexFunc)
+func RegisterPublicKeyIndexer(ctx context.Context, indexer client.FieldIndexer) error {
+	return indexer.IndexField(ctx, &corev1.Node{}, indexFieldPublicKey, publicKeyIndexFunc)
 }
 
 func GetNodeByPublicKey(ctx context.Context, c client.Reader, publicKey string) (*corev1.Node, error) {

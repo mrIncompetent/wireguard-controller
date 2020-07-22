@@ -27,6 +27,7 @@ const (
 )
 
 func Add(
+	ctx context.Context,
 	mgr ctrl.Manager,
 	log *zap.Logger,
 	interfaceName string,
@@ -61,7 +62,7 @@ func Add(
 		},
 	}
 
-	if err := kubernetes.RegisterPublicKeyIndexer(mgr.GetFieldIndexer()); err != nil {
+	if err := kubernetes.RegisterPublicKeyIndexer(ctx, mgr.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("unable to register the public key indexer: %w", err)
 	}
 

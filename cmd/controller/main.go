@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net"
 
@@ -34,6 +35,15 @@ var (
 func main() {
 	flag.Parse()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		signalChan := ctrl.SetupSignalHandler()
+		<-signalChan
+		cancel()
+	}()
+
 	log := ctrlzap.NewRaw(enableDevelopment(*development))
 	ctrl.SetLogger(zapr.NewLogger(log))
 
@@ -60,6 +70,7 @@ func main() {
 	keyStore := keyhelper.New()
 
 	if err := wireguard_interface.Add(
+		ctx,
 		mgr,
 		log,
 		*interfaceName,
@@ -126,7 +137,7 @@ func main() {
 
 	log.Info("Starting manager")
 
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx.Done()); err != nil {
 		log.Panic("problem running manager", zap.Error(err))
 	}
 }
