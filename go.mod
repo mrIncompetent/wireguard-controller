@@ -10,7 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.5.1
 	github.com/vishvananda/netlink v1.1.0
 	go.uber.org/multierr v1.5.0
-	go.uber.org/zap v1.14.1
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904 // indirect
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200320 // indirect
