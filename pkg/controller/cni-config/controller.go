@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ func Add(
 	interfaceName string,
 	podNet *net.IPNet,
 	nodeName string,
-	promRegistry prometheus.Registerer,
+	metricFactory promauto.Factory,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,

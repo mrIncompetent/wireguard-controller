@@ -7,6 +7,7 @@ import (
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/multierr"
@@ -34,19 +35,15 @@ func Add(
 	listeningPort int,
 	nodeName string,
 	keyStore KeyStore,
-	promRegistry prometheus.Registerer,
+	metricFactory promauto.Factory,
 ) error {
 	m := &metrics{
-		peerCount: prometheus.NewGauge(
+		peerCount: metricFactory.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "wireguard_peer_count",
 				Help: "Number of configured WireGuard peers.",
 			},
 		),
-	}
-
-	if err := m.Register(promRegistry); err != nil {
-		return fmt.Errorf("unable to register metrics: %w", err)
 	}
 
 	options := controller.Options{

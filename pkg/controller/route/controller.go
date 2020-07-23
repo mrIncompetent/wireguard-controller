@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vishvananda/netlink"
@@ -37,20 +38,16 @@ func Add(
 	log *zap.Logger,
 	interfaceName,
 	nodeName string,
-	promRegistry prometheus.Registerer,
+	metricFactory promauto.Factory,
 ) error {
 	m := &metrics{
-		routeReplaceLatency: prometheus.NewHistogram(
+		routeReplaceLatency: metricFactory.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "netlink_route_replace_latency_seconds",
 				Help:    "Replace latency in seconds.",
 				Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
 			},
 		),
-	}
-
-	if err := m.Register(promRegistry); err != nil {
-		return fmt.Errorf("unable to register metrics: %w", err)
 	}
 
 	options := controller.Options{

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -38,7 +38,7 @@ func Add(
 	log *zap.Logger,
 	privateKeyFilePath string,
 	keyStore keyStore,
-	promRegistry prometheus.Registerer,
+	metricFactory promauto.Factory,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,

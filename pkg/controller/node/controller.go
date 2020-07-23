@@ -8,9 +8,9 @@ import (
 
 	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,7 +45,7 @@ func Add(
 	nodeName string,
 	wireGuardPort int,
 	keyStore KeyStore,
-	promRegistry prometheus.Registerer,
+	metricFactory promauto.Factory,
 ) error {
 	options := controller.Options{
 		MaxConcurrentReconciles: 1,

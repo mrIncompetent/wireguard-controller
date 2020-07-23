@@ -7,7 +7,3 @@ import (
 type metrics struct {
 	peerCount prometheus.Gauge
 }
-
-func (m *metrics) Register(reg prometheus.Registerer) error {
-	return reg.Register(m.peerCount)
-}
