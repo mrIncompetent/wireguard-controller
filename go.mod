@@ -3,7 +3,7 @@ module github.com/mrincompetent/wireguard-controller
 go 1.14
 
 require (
-	github.com/go-logr/zapr v0.1.1
+	github.com/go-logr/zapr v0.2.0
 	github.com/go-test/deep v1.0.7
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
