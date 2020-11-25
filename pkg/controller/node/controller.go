@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/source"
-	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-
 	"go.uber.org/zap"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -20,6 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
+	"github.com/mrincompetent/wireguard-controller/pkg/wireguard/kubernetes"
 )
 
 const (

@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -15,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
 )
 
 const (

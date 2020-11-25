@@ -6,9 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/mrincompetent/wireguard-controller/pkg/source"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	"github.com/mrincompetent/wireguard-controller/pkg/source"
 )
 
 const (

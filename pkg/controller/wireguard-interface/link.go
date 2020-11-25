@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net"
 
-	wgnetlink "github.com/mrincompetent/wireguard-controller/pkg/wireguard/netlink"
-
 	"github.com/vishvananda/netlink"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+
+	wgnetlink "github.com/mrincompetent/wireguard-controller/pkg/wireguard/netlink"
 )
 
 func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) error {

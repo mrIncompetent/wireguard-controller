@@ -5,6 +5,13 @@ import (
 	"flag"
 	"net"
 
+	"github.com/go-logr/zapr"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/zap"
+	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	cniconfig "github.com/mrincompetent/wireguard-controller/pkg/controller/cni-config"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/key"
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/node"
@@ -12,13 +19,6 @@ import (
 	"github.com/mrincompetent/wireguard-controller/pkg/controller/telemetry"
 	wireguard_interface "github.com/mrincompetent/wireguard-controller/pkg/controller/wireguard-interface"
 	keyhelper "github.com/mrincompetent/wireguard-controller/pkg/wireguard/key"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-
-	"github.com/go-logr/zapr"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
-	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (

@@ -6,13 +6,13 @@ import (
 	"net"
 	"testing"
 
-	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
-	"go.uber.org/zap/zaptest"
-
 	"github.com/go-test/deep"
+	"go.uber.org/zap/zaptest"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
 )
 
 func TestGetPeerConfigForNode(t *testing.T) {

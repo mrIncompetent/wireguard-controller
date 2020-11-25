@@ -7,8 +7,9 @@ import (
 	"os"
 	"testing"
 
-	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
 	"go.uber.org/zap/zaptest"
+
+	testhelper "github.com/mrincompetent/wireguard-controller/pkg/test"
 )
 
 func TestTemplateFile(t *testing.T) {
