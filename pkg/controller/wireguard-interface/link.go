@@ -57,6 +57,7 @@ func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) erro
 	for _, existingAddr := range addresses {
 		if existingAddr.Equal(*wireGuardAddress) {
 			found = true
+
 			break
 		}
 	}

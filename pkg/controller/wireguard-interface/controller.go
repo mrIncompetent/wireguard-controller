@@ -166,6 +166,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		if nodeList.Items[i].Name == r.nodeName {
 			nodeLog.Debug("Skipping node as its the node we're running on")
+
 			continue
 		}
 
@@ -191,6 +192,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			if kubernetes.IsNodeNotInitializedError(err) {
 				nodeLog.Debug("Skipping node: " + err.Error())
+
 				continue
 			}
 

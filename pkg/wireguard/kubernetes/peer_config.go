@@ -23,6 +23,7 @@ func (e NodeNotInitializedError) Error() string {
 
 func IsNodeNotInitializedError(err error) bool {
 	_, isNotInitialized := err.(NodeNotInitializedError)
+
 	return isNotInitialized
 }
 

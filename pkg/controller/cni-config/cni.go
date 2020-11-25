@@ -91,6 +91,7 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 
 	if bytes.Equal(currentContent, output.Bytes()) {
 		log.Debug("Not writing CNI config as its already up to date")
+
 		return nil
 	}
 

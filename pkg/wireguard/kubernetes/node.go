@@ -22,6 +22,7 @@ func (e PublicKeyNotFoundError) Error() string {
 
 func IsPublicKeyNotFound(err error) bool {
 	_, isNotFound := err.(PublicKeyNotFoundError)
+
 	return isNotFound
 }
 
@@ -47,6 +48,7 @@ func SetPublicKey(node *corev1.Node, publicKey wgtypes.Key) bool {
 	// We cannot validate public keys :/
 	if node.Annotations[AnnotationKeyPublicKey] == "" {
 		node.Annotations[AnnotationKeyPublicKey] = publicKey.String()
+
 		return true
 	}
 
@@ -61,6 +63,7 @@ func (e EndpointNotFoundError) Error() string {
 
 func IsEndpointNotFound(err error) bool {
 	_, isNotFound := err.(EndpointNotFoundError)
+
 	return isNotFound
 }
 
@@ -84,6 +87,7 @@ func SetEndpointAddress(node *corev1.Node, address string) bool {
 
 	if node.Annotations[AnnotationKeyEndpoint] != address {
 		node.Annotations[AnnotationKeyEndpoint] = address
+
 		return true
 	}
 

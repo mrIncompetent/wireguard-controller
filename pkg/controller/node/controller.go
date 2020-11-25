@@ -95,6 +95,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 			log.Info("Updated the node's public key")
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -122,6 +123,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 			log.Info("Updated the node's WireGuard endpoint")
 		}
+
 		return nil
 	})
 	if err != nil {

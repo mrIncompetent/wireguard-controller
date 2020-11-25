@@ -79,6 +79,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		// In case the interface was not created yet we requeue
 		if _, isNotFound := err.(netlink.LinkNotFoundError); isNotFound {
 			log.Debug("Skipping route reconciling since the link is not up yet")
+
 			return ctrl.Result{}, nil
 		}
 
@@ -101,6 +102,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		nodeLog := log.With(zap.String("node", nodeList.Items[i].Name))
 		if err := r.setupRoute(nodeLog, link, &nodeList.Items[i]); err != nil {
 			combinedErr = multierr.Append(combinedErr, fmt.Errorf("unable to setup route for node '%s': %w", nodeList.Items[i].Name, err))
+
 			continue
 		}
 	}

@@ -45,6 +45,7 @@ func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimit
 				queue.Add(staticRequest)
 			case <-i.stop:
 				ticker.Stop()
+
 				return
 			}
 		}
