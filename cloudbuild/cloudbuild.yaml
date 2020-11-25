@@ -1,5 +1,5 @@
 steps:
-  - name: 'golang:1.14.2-alpine'
+  - name: 'golang:1.15.5-alpine'
     args: ['go', 'mod', 'download']
     volumes:
       - name: 'gopath'
@@ -9,17 +9,17 @@ steps:
     volumes:
       - name: 'gopath'
         path: '/go'
-  - name: 'golang:1.14.2-alpine'
+  - name: 'golang:1.15.5-alpine'
     args: ['go', 'test', './...']
     volumes:
       - name: 'gopath'
         path: '/go'
-  - name: 'golang:1.14.2-alpine'
+  - name: 'golang:1.15.5-alpine'
     args: ['go', 'build', '-o', 'wireguard-controller', 'github.com/mrincompetent/wireguard-controller/cmd/controller']
     volumes:
       - name: 'gopath'
         path: '/go'
-  - name: 'golang:1.14.2-alpine'
+  - name: 'golang:1.15.5-alpine'
     args: ['go', 'mod', 'verify']
     volumes:
       - name: 'gopath'

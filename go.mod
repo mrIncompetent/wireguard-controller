@@ -1,6 +1,6 @@
 module github.com/mrincompetent/wireguard-controller
 
-go 1.14
+go 1.15
 
 require (
 	github.com/go-logr/zapr v0.1.1
