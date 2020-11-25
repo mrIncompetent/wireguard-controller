@@ -1,4 +1,4 @@
-FROM alpine:3.11.5
+FROM alpine:3.12.1
 
 RUN mkdir -p /cni-bin && \
     wget -O cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v0.8.5/cni-plugins-linux-amd64-v0.8.5.tgz && \
