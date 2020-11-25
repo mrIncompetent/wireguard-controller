@@ -108,9 +108,7 @@ func (n Networks) String() string {
 	return strings.Join(s, ",")
 }
 
-var (
-	ErrFailedToParseAddress = errors.New("failed to parse node address")
-)
+var ErrFailedToParseAddress = errors.New("failed to parse node address")
 
 func AllowedNetworks(node *corev1.Node) (networks Networks, err error) {
 	for _, addr := range node.Status.Addresses {

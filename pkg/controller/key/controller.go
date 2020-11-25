@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, fmt.Errorf("unable to generate key: %w", err)
 		}
 
-		if err := ioutil.WriteFile(r.privateKeyFilePath, []byte(key.String()), 0400); err != nil {
+		if err := ioutil.WriteFile(r.privateKeyFilePath, []byte(key.String()), 0o400); err != nil {
 			return ctrl.Result{}, fmt.Errorf("unable to write private key to '%s': %w", r.privateKeyFilePath, err)
 		}
 

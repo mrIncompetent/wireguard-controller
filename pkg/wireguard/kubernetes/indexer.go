@@ -17,9 +17,7 @@ const (
 	indexFieldPublicKey = "wireguard-public-key"
 )
 
-var (
-	ErrGotMultipleNodesWithPublicKey = errors.New("got more than 1 node with the public key. This must not happen")
-)
+var ErrGotMultipleNodesWithPublicKey = errors.New("got more than 1 node with the public key. This must not happen")
 
 func publicKeyIndexFunc(o runtime.Object) []string {
 	node, ok := o.(*corev1.Node)

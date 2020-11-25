@@ -41,7 +41,7 @@ func TestTemplateFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// We cant use ioutil.TempFile() here because we need to have stable filenames to test the log output
-			srcFile, err := os.OpenFile("/tmp/wireguard-controller-test-tpl.conf", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+			srcFile, err := os.OpenFile("/tmp/wireguard-controller-test-tpl.conf", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -51,7 +51,7 @@ func TestTemplateFile(t *testing.T) {
 			}
 
 			// We cant use ioutil.TempFile() here because we need to have stable filenames to test the log output
-			targetFile, err := os.OpenFile("/tmp/wireguard-controller-test.conf", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+			targetFile, err := os.OpenFile("/tmp/wireguard-controller-test.conf", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 			if err != nil {
 				t.Fatal(err)
 			}

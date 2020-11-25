@@ -97,7 +97,7 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 
 	log.Info("CNI config does not match desired config, will override it")
 
-	if err := ioutil.WriteFile(targetFilename, output.Bytes(), 0644); err != nil {
+	if err := ioutil.WriteFile(targetFilename, output.Bytes(), 0o644); err != nil {
 		return fmt.Errorf("failed to write CNI file: %w", err)
 	}
 

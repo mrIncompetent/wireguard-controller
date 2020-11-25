@@ -15,6 +15,7 @@ type Link struct {
 func (w *Link) Attrs() *netlink.LinkAttrs {
 	return &w.LinkAttrs
 }
+
 func (w *Link) Type() string {
 	return LinkType
 }
