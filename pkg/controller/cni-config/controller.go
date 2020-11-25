@@ -2,6 +2,7 @@ package cniconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -79,7 +80,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	link, err := netlink.LinkByName(r.interfaceName)
 	if err != nil {
 		// In case the interface was not created yet we requeue
-		if _, isNotFound := err.(netlink.LinkNotFoundError); isNotFound {
+		if errors.As(err, &netlink.LinkNotFoundError{}) {
 			log.Debug("Skipping route reconciling since the link is not up yet")
 
 			return ctrl.Result{}, nil

@@ -22,9 +22,7 @@ func (e PublicKeyNotFoundError) Error() string {
 }
 
 func IsPublicKeyNotFound(err error) bool {
-	_, isNotFound := err.(PublicKeyNotFoundError)
-
-	return isNotFound
+	return errors.As(err, &PublicKeyNotFoundError{})
 }
 
 func PublicKey(node *corev1.Node) (key wgtypes.Key, err error) {
@@ -63,9 +61,7 @@ func (e EndpointNotFoundError) Error() string {
 }
 
 func IsEndpointNotFound(err error) bool {
-	_, isNotFound := err.(EndpointNotFoundError)
-
-	return isNotFound
+	return errors.As(err, &EndpointNotFoundError{})
 }
 
 func EndpointAddress(node *corev1.Node) (addr *net.UDPAddr, err error) {

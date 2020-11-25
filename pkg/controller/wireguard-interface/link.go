@@ -1,6 +1,7 @@
 package wireguardinterface
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -14,7 +15,7 @@ import (
 func (r *Reconciler) configureInterface(log *zap.Logger, node *corev1.Node) error {
 	link, err := netlink.LinkByName(r.interfaceName)
 	if err != nil {
-		if _, isNotFoundErr := err.(netlink.LinkNotFoundError); !isNotFoundErr {
+		if !errors.As(err, &netlink.LinkNotFoundError{}) {
 			return fmt.Errorf("unable to get the interface %s: %w", r.interfaceName, err)
 		}
 

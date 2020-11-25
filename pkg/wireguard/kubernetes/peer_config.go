@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -22,9 +23,7 @@ func (e NodeNotInitializedError) Error() string {
 }
 
 func IsNodeNotInitializedError(err error) bool {
-	_, isNotInitialized := err.(NodeNotInitializedError)
-
-	return isNotInitialized
+	return errors.As(err, &NodeNotInitializedError{})
 }
 
 func PeerConfigForNode(log *zap.Logger, node *corev1.Node) (*wgtypes.PeerConfig, error) {

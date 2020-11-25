@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/pprof"
 	"time"
@@ -65,7 +66,7 @@ func (h *healthHandler) Start(stop <-chan struct{}) error {
 		h.log.Info("Starting the telemetry server")
 
 		if err := h.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
+			if errors.Is(err, http.ErrServerClosed) {
 				h.log.Error("Failed to start the http server", zap.Error(err))
 			}
 		}
