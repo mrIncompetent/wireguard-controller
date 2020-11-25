@@ -65,7 +65,7 @@ func Add(
 
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new controller: %w", err)
 	}
 
 	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
@@ -214,5 +214,9 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		reconfigureErrors = multierr.Append(reconfigureErrors, fmt.Errorf("unable to reconfigure interface: %w", err))
 	}
 
-	return ctrl.Result{}, reconfigureErrors
+	if reconfigureErrors != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reconfigure at least one node: %w", err)
+	}
+
+	return ctrl.Result{}, nil
 }

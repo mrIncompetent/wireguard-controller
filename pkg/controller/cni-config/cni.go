@@ -65,28 +65,28 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 
 	content, err := ioutil.ReadFile(sourceFilename)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading file failed: %w", err)
 	}
 
 	log.Debug("successfully read template file")
 
 	tpl, err := template.New(path.Base(sourceFilename)).Parse(string(content))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create template: %w", err)
 	}
 
 	log.Debug("successfully parsed template file")
 
 	output := &bytes.Buffer{}
 	if err := tpl.Execute(output, data); err != nil {
-		return err
+		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
 	log.Debug("successfully executed the template")
 
 	currentContent, err := ioutil.ReadFile(targetFilename)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return fmt.Errorf("reading file failed: %w", err)
 	}
 
 	if bytes.Equal(currentContent, output.Bytes()) {
@@ -98,7 +98,7 @@ func templateFile(parentLog *zap.Logger, sourceFilename, targetFilename string, 
 	log.Info("CNI config does not match desired config, will override it")
 
 	if err := ioutil.WriteFile(targetFilename, output.Bytes(), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write CNI file: %w", err)
 	}
 
 	log.Info("Successfully wrote CNI config")

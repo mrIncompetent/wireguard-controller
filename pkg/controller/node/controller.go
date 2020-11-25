@@ -60,7 +60,7 @@ func Add(
 
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new controller: %w", err)
 	}
 
 	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
@@ -91,7 +91,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		if kubernetes.SetPublicKey(node, key.PublicKey()) {
 			if err := r.Client.Update(ctx, node); err != nil {
-				return err
+				return fmt.Errorf("failed to update public key on node: %w", err)
 			}
 			log.Info("Updated the node's public key")
 		}
@@ -119,7 +119,7 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		if kubernetes.SetEndpointAddress(node, wireGuardEndpoint) {
 			if err := r.Client.Update(ctx, node); err != nil {
-				return err
+				return fmt.Errorf("failed to update endpoint address on node: %w", err)
 			}
 			log.Info("Updated the node's WireGuard endpoint")
 		}

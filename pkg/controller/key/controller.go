@@ -55,7 +55,7 @@ func Add(
 
 	c, err := controller.New(name, mgr, options)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new controller: %w", err)
 	}
 
 	return c.Watch(source.NewIntervalSource(5*time.Second), &handler.EnqueueRequestForObject{})
