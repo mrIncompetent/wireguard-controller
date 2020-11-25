@@ -2,7 +2,7 @@ run:
   tests: false
   timeout: 10m
 service:
-  golangci-lint-version: 1.23.8
+  golangci-lint-version: 1.32.2
 linters:
   enable-all: true
   disable:
@@ -11,6 +11,8 @@ linters:
     - gochecknoglobals
     - gochecknoinits
     - gomnd
+    - exhaustivestruct
+    - gosec
 linters-settings:
   errcheck:
     check-type-assertions: true
