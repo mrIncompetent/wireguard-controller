@@ -34,7 +34,7 @@ func TestTemplateFile(t *testing.T) {
 			data: tplData{
 				PodCIDR: "10.244.1.0/24",
 			},
-			expectedErr: errors.New(`template: wireguard-controller-test-tpl.conf:1: function "BROKEN_SHOULD_NOT_WORK" not defined`),
+			expectedErr: errors.New(`failed to create template: template: wireguard-controller-test-tpl.conf:1: function "BROKEN_SHOULD_NOT_WORK" not defined`),
 		},
 	}
 
