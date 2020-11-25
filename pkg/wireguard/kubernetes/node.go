@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -111,12 +112,16 @@ func (n Networks) String() string {
 	return strings.Join(s, ",")
 }
 
+var (
+	ErrFailedToParseAddress = errors.New("failed to parse node address")
+)
+
 func AllowedNetworks(node *corev1.Node) (networks Networks, err error) {
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == corev1.NodeExternalIP || addr.Type == corev1.NodeInternalIP {
 			ip := net.ParseIP(addr.Address)
 			if ip == nil {
-				return nil, fmt.Errorf("could not parse IP address: '%s'", addr.Address)
+				return nil, fmt.Errorf("%w: '%s'", ErrFailedToParseAddress, addr.Address)
 			}
 
 			networks = append(networks, net.IPNet{IP: ip.To4(), Mask: net.IPv4Mask(255, 255, 255, 255)})

@@ -1,7 +1,7 @@
 package source
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +16,8 @@ var (
 		Name:      "static",
 		Namespace: "default",
 	}}
+
+	ErrStartCalledBeforeDependencyInjection = errors.New("must call InjectStop on IntervalSource before calling Start")
 )
 
 type IntervalSource struct {
@@ -31,7 +33,7 @@ func NewIntervalSource(interval time.Duration) *IntervalSource {
 
 func (i *IntervalSource) Start(h handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
 	if i.stop == nil {
-		return fmt.Errorf("must call InjectStop on IntervalSource before calling Start")
+		return ErrStartCalledBeforeDependencyInjection
 	}
 
 	ticker := time.NewTicker(i.interval)
